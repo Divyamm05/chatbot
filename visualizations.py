@@ -79,22 +79,25 @@ def generate_pie_chart(data_column, start_value, end_value):
     st.pyplot(fig)
 
 
-def generate_bar_chart(data, x_column, y_column, start_value, end_value):
+def generate_bar_chart(data, x_column, y_column, start_x_value, end_x_value, start_y_value, end_y_value):
     """
-    Generate a bar chart based on selected columns and range of data.
+    Generate a bar chart based on selected columns and range of data for both axes.
     Args:
         data (pd.DataFrame): The dataset.
         x_column (str): The column for the X-axis.
         y_column (str): The column for the Y-axis.
-        start_value (int): The starting index for the data range.
-        end_value (int): The ending index for the data range.
+        start_x_value (int): The starting index for the X-axis range.
+        end_x_value (int): The ending index for the X-axis range.
+        start_y_value (int): The starting index for the Y-axis range.
+        end_y_value (int): The ending index for the Y-axis range.
     """
-    # Slice the data to get the selected range
-    selected_data = data[start_value:end_value]
+    # Slice the data to get the selected range for both X and Y axes
+    selected_data_x = data[x_column][start_x_value:end_x_value]
+    selected_data_y = data[y_column][start_y_value:end_y_value]
 
     # Create the bar chart
     fig, ax = plt.subplots()
-    ax.bar(selected_data[x_column], selected_data[y_column])
+    ax.bar(selected_data_x, selected_data_y)
 
     # Set chart labels and title
     ax.set_xlabel(x_column)
