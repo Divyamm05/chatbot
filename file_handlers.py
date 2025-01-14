@@ -24,7 +24,7 @@ def handle_uploaded_file(uploaded_file):
         # Handle TXT file content
         elif uploaded_file.type == "text/plain":
             text_content = uploaded_file.getvalue().decode("utf-8")
-            data = pd.Series([text_content])  # Convert text to pandas Series
+            data = text_content  # Directly return the text content
 
         # Handle PDF file content
         elif uploaded_file.type == "application/pdf":
@@ -32,7 +32,7 @@ def handle_uploaded_file(uploaded_file):
             pdf_text = ""
             for page in pdf_file.pages:
                 pdf_text += page.extract_text()
-            data = pd.Series([pdf_text])  # Convert text to pandas Series
+            data = pdf_text  # Directly return the extracted text
 
         # Handle DOCX file content
         elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
@@ -41,14 +41,14 @@ def handle_uploaded_file(uploaded_file):
             doc_text = ""
             for para in doc.paragraphs:
                 doc_text += para.text + "\n"
-            data = pd.Series([doc_text])  # Convert text to pandas Series
+            data = doc_text  # Directly return the extracted text
 
         # Handle image files
         elif uploaded_file.type in ["image/jpeg", "image/png"]:
             img = Image.open(uploaded_file)
             img = img.convert('L')
             df = pd.DataFrame(img.getdata(), columns=['pixel'])
-            data = df.iloc[:, 0]
+            data = df.iloc[:, 0]  # Just return pixel data if necessary, or analyze image as needed
 
         else:
             raise ValueError("Unsupported file type")
