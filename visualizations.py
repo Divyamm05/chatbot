@@ -39,36 +39,29 @@ def generate_pie_chart(data, column_name, start_value, end_value):
     # Display the pie chart in Streamlit
     st.pyplot(fig)
 
-def generate_bar_chart(data, x_column, y_column, start_x_value, end_x_value, start_y_value, end_y_value):
-    """
+def generate_bar_chart(data, x_column, y_column, start_value, end_value, start_y_value, end_y_value):
+    """ 
     Generate a bar chart based on selected columns and range of data for both axes.
     
     Args:
         data (pd.DataFrame): The dataset.
         x_column (str): The column for the X-axis.
         y_column (str): The column for the Y-axis.
-        start_x_value (int): The starting index for the X-axis range.
-        end_x_value (int): The ending index for the X-axis range.
-        start_y_value (int): The starting index for the Y-axis range.
-        end_y_value (int): The ending index for the Y-axis range.
-    """
-    if not isinstance(data, pd.DataFrame):
-        st.error("The uploaded file is not a valid DataFrame.")
-        return
-
-    # Validate if the x_column and y_column are in the dataframe
-    if x_column not in data.columns or y_column not in data.columns:
-        st.error(f"Columns {x_column} and {y_column} not found in the dataset.")
-        return
-
-    # Slice the data to get the selected range for both X and Y axes
-    selected_data_x = data[x_column].iloc[start_x_value:end_x_value]
-    selected_data_y = data[y_column].iloc[start_y_value:end_y_value]
-
-    # Check if the lengths match
-    if len(selected_data_x) != len(selected_data_y):
-        st.error("The selected ranges for X and Y axes don't match in length.")
-        return
+        start_value (int): The starting index for the range.
+        end_value (int): The ending index for the range.
+    """ 
+    if not isinstance(data, pd.DataFrame): 
+        st.error("The uploaded file is not a valid DataFrame.") 
+        return 
+    
+    # Validate if the x_column and y_column are in the dataframe 
+    if x_column not in data.columns or y_column not in data.columns: 
+        st.error(f"Columns {x_column} and {y_column} not found in the dataset.") 
+        return 
+    
+    # Slice the data to get the selected range for both X and Y axes 
+    selected_data_x = data[x_column].iloc[start_value:end_value] 
+    selected_data_y = data[y_column].iloc[start_value:end_value] 
 
     # Create the bar chart
     fig, ax = plt.subplots()

@@ -67,27 +67,20 @@ if len(columns) > 0:
 
 # Conditionally display the sliders for range values for both axes
 if chart_type == "Bar Chart" and x_column is not None and y_column is not None:
-    start_x_value, end_x_value = st.slider(
-        "Select range of X-axis values to visualize",
+    # Single slider for both X and Y axis
+    start_value, end_value = st.slider(
+        "Select range of values to visualize",
         min_value=0,
         max_value=len(x_column),  # Set max value to the length of the data
         value=(0, min(10, len(x_column))),  # Default range (start from 0 to 10 or data length)
         step=1,
-        help="Select the start and end values for the X-axis"
-    )
-    
-    start_y_value, end_y_value = st.slider(
-        "Select range of Y-axis values to visualize",
-        min_value=0,
-        max_value=len(y_column),  # Set max value to the length of the data
-        value=(0, min(10, len(y_column))),  # Default range (start from 0 to 10 or data length)
-        step=1,
-        help="Select the start and end values for the Y-axis"
+        help="Select the start and end values for both X and Y axes"
     )
 
     if st.button("Generate Bar Chart"):
         # Pass column names as strings (use .name to get the column name)
-        generate_bar_chart(data, x_column.name, y_column.name, start_x_value, end_x_value, start_y_value, end_y_value)
+        generate_bar_chart(data, x_column.name, y_column.name, start_value, end_value, start_value, end_value)
+
 
 # Pie chart dropdown functionality
 if chart_type == "Pie Chart" and pie_column is not None:
