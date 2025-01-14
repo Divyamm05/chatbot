@@ -102,7 +102,8 @@ if chart_type == "Pie Chart" and pie_column is not None:
     )
 
     if st.button("Generate Pie Chart"):
-        generate_pie_chart(data, pie_column, start_value, end_value)
+        # Update to slice the data based on the selected column and range
+        generate_pie_chart(data[pie_column], start_value, end_value)
 
 # Display chat messages
 for message in st.session_state.messages:
