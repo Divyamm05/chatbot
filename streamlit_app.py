@@ -91,19 +91,25 @@ if chart_type == "Bar Chart" and x_column is not None and y_column is not None:
 
 # Pie chart dropdown functionality
 if chart_type == "Pie Chart" and pie_column is not None:
-    # Dropdown for Pie Chart column selection
-    start_value, end_value = st.slider(
-        "Select range of data for Pie Chart",
-        min_value=0,
-        max_value=len(data),  # Set max value to the length of the data
-        value=(0, min(10, len(data))),  # Default range (start from 0 to 10 or data length)
-        step=1,
-        help="Select the range of data for the Pie Chart"
-    )
+    # Add debugging print statements
+    st.write("Available columns in data:", data.columns)  # Show the columns
+    st.write("Selected Pie Chart column:", pie_column)  # Show the selected pie column
 
-    if st.button("Generate Pie Chart"):
-        # Update to slice the data based on the selected column and range
-        generate_pie_chart(data[pie_column], start_value, end_value)
+    if pie_column not in data.columns:
+        st.error(f"The column '{pie_column}' does not exist in the data.")
+    else:
+        start_value, end_value = st.slider(
+            "Select range of data for Pie Chart",
+            min_value=0,
+            max_value=len(data),  # Set max value to the length of the data
+            value=(0, min(10, len(data))),  # Default range (start from 0 to 10 or data length)
+            step=1,
+            help="Select the range of data for the Pie Chart"
+        )
+
+        if st.button("Generate Pie Chart"):
+            # Pass the sliced data as series (data[pie_column])
+            generate_pie_chart(data[pie_column], start_value, end_value)
 
 # Display chat messages
 for message in st.session_state.messages:
