@@ -14,18 +14,19 @@ def preview_uploaded_file(data, num_rows=5):
     st.write("Dataset preview:")
     st.dataframe(data.head(num_rows))
 
-def generate_pie_chart(data, start_value, end_value):
+def generate_pie_chart(data, column_name, start_value, end_value):
     """
     Generate a pie chart based on a selected column from the dataset.
     Only the data in the range [start_value, end_value] will be visualized.
 
     Args:
-        data (pd.Series): The column to create the pie chart from.
+        data (pd.DataFrame): The dataset.
+        column_name (str): The column name for the Pie Chart.
         start_value (int): The starting index for the data range.
         end_value (int): The ending index for the data range.
     """
     # Slice the data to get the selected range
-    selected_data = data[start_value:end_value]
+    selected_data = data[column_name].iloc[start_value:end_value]
     
     # Generate value counts (for pie chart)
     value_counts = selected_data.value_counts()
@@ -34,9 +35,6 @@ def generate_pie_chart(data, start_value, end_value):
     fig, ax = plt.subplots()
     ax.pie(value_counts, labels=value_counts.index, autopct='%1.1f%%', startangle=90)
     ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-
-    # Rotate the labels to prevent clutter
-    plt.xticks(rotation=45)  # Rotate labels at a 45-degree angle
 
     # Display the pie chart in Streamlit
     st.pyplot(fig)
@@ -76,13 +74,13 @@ def generate_bar_chart(data, x_column, y_column, start_x_value, end_x_value, sta
     fig, ax = plt.subplots()
     ax.bar(selected_data_x, selected_data_y)
 
+    # Rotate the x-axis labels to prevent clutter
+    plt.xticks(rotation=45, ha='right')
+
     # Set chart labels and title
     ax.set_xlabel(x_column)
     ax.set_ylabel(y_column)
     ax.set_title(f"Bar Chart: {y_column} vs {x_column}")
-
-    # Rotate the X-axis labels to prevent clutter
-    plt.xticks(rotation=45)  # Rotate labels at a 45-degree angle
 
     # Display the bar chart in Streamlit
     st.pyplot(fig)

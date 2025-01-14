@@ -3,8 +3,8 @@ import streamlit as st
 import openai
 import json
 import os
-from utils import load_chat_history, save_chat_history, generate_chart_description
-from visualizations import generate_pie_chart, generate_bar_chart, preview_uploaded_file
+from utils import load_chat_history, save_chat_history
+from visualizations import generate_pie_chart, generate_bar_chart, preview_uploaded_file  # Updated import
 
 # Load API key from Streamlit's secrets
 openai.api_key = st.secrets["openai"]["api_key"]
@@ -102,7 +102,11 @@ if chart_type == "Pie Chart" and pie_column is not None:
     )
 
     if st.button("Generate Pie Chart"):
-        generate_pie_chart(data[pie_column], start_value, end_value)
+        # Ensure that pie_column is not empty or None
+        if pie_column is not None and not pie_column.empty:
+            generate_pie_chart(data, pie_column.name, start_value, end_value)
+        else:
+            st.error("Please select a valid column for the Pie Chart")
 
 # Display chat messages
 for message in st.session_state.messages:
