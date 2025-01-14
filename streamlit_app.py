@@ -4,7 +4,7 @@ import openai
 import sqlite3
 import os
 from utils import load_chat_history, save_chat_history
-from visualizations import generate_pie_chart, generate_bar_chart, preview_uploaded_file
+from visualizations import generate_pie_chart, generate_bar_chart, preview_uploaded_file  # Updated import
 from file_handlers import handle_uploaded_file
 
 # Load API key from Streamlit's secrets
@@ -37,12 +37,10 @@ def fetch_user_details(conn, username):
     user = cursor.fetchone()  # Fetch one user record
     return user
 
-# Function to process chat input and query the database or OpenAI
+# Function to process chat input and query the database
 def process_chat_input(prompt, db_path=DB_PATH):
     conn = connect_to_db(db_path)
     user_data = None
-    response = None
-
     if conn:
         # Extract username from the user input or chat context
         username = extract_username_from_prompt(prompt)  # Function to dynamically extract the username
@@ -53,29 +51,13 @@ def process_chat_input(prompt, db_path=DB_PATH):
         user_data = fetch_user_details(conn, username)
         conn.close()
 
+    # Process the chat input
     if user_data:
         response = f"Hello, {user_data[2]} {user_data[3]}! How can I assist you today?"
     else:
-        # Fallback to OpenAI if user not found
-        response = ask_openai(prompt)
+        response = "User not found. Would you like to upload a file for chart generation instead?"
 
     return response
-
-# Function to interact with OpenAI's GPT-3.5 or GPT-4 model
-def ask_openai(prompt):
-    # Create the request to OpenAI API
-    try:
-        response = openai.ChatCompletion.create(
-            model=OPENAI_MODEL,
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=MAX_TOKENS
-        )
-        return response.choices[0].message['content'].strip()
-    except Exception as e:
-        return f"Error: {str(e)}"
 
 # Function to extract username from the prompt (simple example)
 def extract_username_from_prompt(prompt):
@@ -83,6 +65,20 @@ def extract_username_from_prompt(prompt):
     if "my username is" in prompt.lower():
         return prompt.split("my username is")[-1].strip()
     return None
+
+# Function to interact with OpenAI's GPT model (updated for OpenAI's new API)
+def ask_openai(prompt):
+    try:
+        # Use the `openai.Completion.create` method for the newer API
+        response = openai.Completion.create(
+            model="gpt-3.5-turbo",  # Or use another model if needed
+            prompt=prompt,
+            max_tokens=MAX_TOKENS
+        )
+        # Get the response content
+        return response.choices[0].text.strip()  # `text` field instead of `message`
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 # Load the previous chat history if available
 if "messages" not in st.session_state:
@@ -186,10 +182,13 @@ if prompt := st.chat_input(f"Enter prompt "):
             st.spinner("Thinking...")
 
         try:
-            # Process the chat input (fetch user details from DB or call OpenAI)
+            # Process the chat input
             response = process_chat_input(prompt, DB_PATH)
             message_placeholder.markdown(response)
-            st.session_state.messages.append({"role": "assistant", "content": response})
+
+            # Ask OpenAI for response (updated for v1.0.0 API)
+            openai_response = ask_openai(prompt)
+            message_placeholder.markdown(f"**Response from AI**: {openai_response}")
 
         except Exception as e:
             st.session_state.messages.append({"role": "assistant", "content": f"Error: {str(e)}"})
