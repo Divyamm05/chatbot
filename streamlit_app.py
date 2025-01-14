@@ -86,7 +86,8 @@ if chart_type == "Bar Chart" and x_column is not None and y_column is not None:
     )
 
     if st.button("Generate Bar Chart"):
-        generate_bar_chart(data, x_column, y_column, start_x_value, end_x_value, start_y_value, end_y_value)
+        # Pass column names as strings (use .name to get the column name)
+        generate_bar_chart(data, x_column.name, y_column.name, start_x_value, end_x_value, start_y_value, end_y_value)
 
 # Pie chart dropdown functionality
 if chart_type == "Pie Chart" and pie_column is not None:
