@@ -109,6 +109,6 @@ def handle_uploaded_file(uploaded_file):
 
         # Return the loaded dataset and its columns
         return data, data.columns.tolist()
-    else:
+    else:   
         st.error("Please upload a file first.")
         return None, None
