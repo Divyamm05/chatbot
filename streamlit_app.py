@@ -215,15 +215,15 @@ if prompt := st.chat_input(f"Enter prompt "):
 
             conversation.extend(st.session_state.messages)  # Add the entire conversation history
 
-            # Request response from OpenAI's API
-            client = openai.completions.create(
+            # Request response from OpenAI's API using `openai.completions.create`
+            response = openai.completions.create(
                 model=OPENAI_MODEL,
-                messages=conversation,
+                prompt=prompt,
                 max_tokens=MAX_TOKENS,
                 temperature=0.7
             )
 
-            full_response = client['choices'][0]['message']['content'].strip()
+            full_response = response.choices[0].text.strip()
             message_placeholder.markdown(full_response)
 
             # Check if the user selected a chart type and generate the corresponding chart
