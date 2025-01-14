@@ -1,6 +1,7 @@
 import pandas as pd
-import streamlit as st
+import matplotlib.pyplot as plt
 import io
+import streamlit as st
 
 # Function to preview dataset after upload
 def preview_uploaded_file(uploaded_file):
@@ -51,3 +52,28 @@ def preview_uploaded_file(uploaded_file):
 
     else:
         st.warning("Unsupported file type. Please upload a TXT, PDF, DOCX, or image file.")
+
+
+def generate_pie_chart(data_column, start_value, end_value):
+    """
+    Generate a pie chart based on a selected column from the dataset.
+    Only the data in the range [start_value, end_value] will be visualized.
+
+    Args:
+        data_column (pd.Series): The column to create the pie chart from.
+        start_value (int): The starting index for the data range.
+        end_value (int): The ending index for the data range.
+    """
+    # Slice the data to get the selected range
+    selected_data = data_column[start_value-1:end_value]
+    
+    # Generate value counts (for pie chart)
+    value_counts = selected_data.value_counts()
+
+    # Create the pie chart
+    fig, ax = plt.subplots()
+    ax.pie(value_counts, labels=value_counts.index, autopct='%1.1f%%', startangle=90)
+    ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+
+    # Display the pie chart in Streamlit
+    st.pyplot(fig)

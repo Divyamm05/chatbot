@@ -1,9 +1,10 @@
-import openai
+import pandas as pd
 import streamlit as st
+import openai
 import json
 import os
 from utils import load_chat_history, save_chat_history, generate_chart_description
-from visualizations import generate_pie_chart
+from visualizations import generate_pie_chart, preview_uploaded_file  # Updated import
 
 # Load API key from Streamlit's secrets
 openai.api_key = st.secrets["openai"]["api_key"]
@@ -41,8 +42,6 @@ with st.sidebar:
 
     # File uploader for attachments (moved below the chart selection and slider)
     uploaded_file = st.file_uploader("Upload an attachment (optional)", type=["txt", "csv", "xlsx", "pdf", "jpg", "png", "docx"])
-
-    
 
 # Handle file uploads and visualization-related tasks
 from file_handlers import handle_uploaded_file
