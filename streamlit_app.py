@@ -72,28 +72,6 @@ if chart_type in ["Pie Chart", "Bar Chart"] and data_column is not None:
         help="Select the start and end values to visualize the chart"
     )
 
-# Add sliders for selecting values for both axes for Bar Chart
-if chart_type == "Bar Chart" and data_column is not None:
-    # Slider for X-axis values selection
-    x_axis_values = st.slider(
-        "Select values for X-axis",
-        min_value=data_column.min(),
-        max_value=data_column.max(),
-        value=(data_column.min(), data_column.max()),
-        step=1,
-        help="Select the range of values for the X-axis"
-    )
-
-    # Slider for Y-axis values selection
-    y_axis_values = st.slider(
-        "Select values for Y-axis",
-        min_value=data_column.min(),
-        max_value=data_column.max(),
-        value=(data_column.min(), data_column.max()),
-        step=1,
-        help="Select the range of values for the Y-axis"
-    )
-
 # Add a button to directly generate Pie Chart
 if chart_type == "Pie Chart" and data_column is not None:
     if st.button("Generate Pie Chart"):
@@ -101,8 +79,35 @@ if chart_type == "Pie Chart" and data_column is not None:
 
 # Add a button to directly generate Bar Chart
 if chart_type == "Bar Chart" and data_column is not None:
+    # Ensure that the values passed to the sliders are integers (or floats if needed)
+    x_axis_min = int(data_column.min())  # Cast to integer
+    x_axis_max = int(data_column.max())  # Cast to integer
+    x_axis_default = (x_axis_min, x_axis_max)  # Default range
+
+    y_axis_min = int(data_column.min())  # Cast to integer
+    y_axis_max = int(data_column.max())  # Cast to integer
+    y_axis_default = (y_axis_min, y_axis_max)  # Default range
+
+    # Add sliders for selecting values for both axes for Bar Chart
+    x_axis_values = st.slider(
+        "Select values for X-axis",
+        min_value=x_axis_min,
+        max_value=x_axis_max,
+        value=x_axis_default,
+        step=1,
+        help="Select the range of values for the X-axis"
+    )
+
+    y_axis_values = st.slider(
+        "Select values for Y-axis",
+        min_value=y_axis_min,
+        max_value=y_axis_max,
+        value=y_axis_default,
+        step=1,
+        help="Select the range of values for the Y-axis"
+    )
+
     if st.button("Generate Bar Chart"):
-        # Call the generate_bar_chart function with the selected values for both axes
         generate_bar_chart(data, x_axis_values, y_axis_values, start_value, end_value)
 
 # Display chat messages
