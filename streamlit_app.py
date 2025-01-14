@@ -1,58 +1,9 @@
-# Move the preview_uploaded_file function definition here
-def preview_uploaded_file(uploaded_file):
-    """Preview the content of the uploaded file based on its type."""
-    if uploaded_file.type == "text/csv":
-        # Display the preview of CSV file
-        df = pd.read_csv(uploaded_file)
-        st.write("CSV File Content:")
-        st.dataframe(df.head())  # Show first 5 rows of CSV
-    elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
-        # Display the preview of Excel file
-        df = pd.read_excel(uploaded_file)
-        st.write("Excel File Content:")
-        st.dataframe(df.head())  # Show first 5 rows of Excel
-    elif uploaded_file.type == "text/plain":
-        # Display the preview of TXT file
-        text_content = uploaded_file.getvalue().decode("utf-8")
-        st.write("Text File Content:")
-        st.text(text_content)  # Display the text
-    elif uploaded_file.type == "application/pdf":
-        # Display the preview of PDF file
-        pdf_reader = PdfReader(uploaded_file)
-        pdf_text = ""
-        for page in pdf_reader.pages:
-            pdf_text += page.extract_text()
-        st.write("PDF File Content:")
-        st.text(pdf_text)  # Display the PDF content
-    elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-        # Display the preview of DOCX file
-        docx_file = io.BytesIO(uploaded_file.getvalue())
-        doc = docx.Document(docx_file)
-        doc_text = ""
-        for para in doc.paragraphs:
-            doc_text += para.text + "\n"
-        st.write("DOCX File Content:")
-        st.text(doc_text)  # Display DOCX content
-    elif uploaded_file.type in ["image/jpeg", "image/png"]:
-        # Display the preview of image file
-        img = Image.open(uploaded_file)
-        st.image(img, caption='Uploaded Image', use_column_width=True)
-    else:
-        st.warning("Unsupported file type. Please upload a TXT, CSV, DOCX, PDF, or image file.")
-
-# Now you can use the preview_uploaded_file function as intended
 import openai
 import streamlit as st
 import json
 import os
 from utils import load_chat_history, save_chat_history, generate_chart_description
 from visualizations import generate_pie_chart
-from file_handlers import handle_uploaded_file
-import pandas as pd
-import io
-from PyPDF2 import PdfReader
-import docx
-from PIL import Image
 
 # Load API key from Streamlit's secrets
 openai.api_key = st.secrets["openai"]["api_key"]
@@ -71,7 +22,7 @@ if "messages" not in st.session_state:
 # Sidebar for chart selection and file attachment
 with st.sidebar:
     col1, col2 = st.columns([3, 1])  # Create two columns in the sidebar for layout
-
+    
     # Sidebar: Add a dropdown menu for selecting chart type
     st.title('🤖💬 CHATBOT')
     
@@ -91,12 +42,10 @@ with st.sidebar:
     # File uploader for attachments (moved below the chart selection and slider)
     uploaded_file = st.file_uploader("Upload an attachment (optional)", type=["txt", "csv", "xlsx", "pdf", "jpg", "png", "docx"])
 
-    if uploaded_file is not None:
-        st.write("Uploaded file:", uploaded_file.name)
-        # Call the preview function to display content of uploaded file
-        preview_uploaded_file(uploaded_file)  
+    
 
 # Handle file uploads and visualization-related tasks
+from file_handlers import handle_uploaded_file
 data, columns = handle_uploaded_file(uploaded_file)
 
 # Initialize data to None by default
