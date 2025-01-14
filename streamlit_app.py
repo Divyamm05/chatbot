@@ -4,7 +4,9 @@ import openai
 import json
 import os
 from utils import load_chat_history, save_chat_history
-from visualizations import generate_pie_chart, generate_bar_chart, preview_uploaded_file  # Updated import
+from visualizations import generate_pie_chart, generate_bar_chart, preview_uploaded_file
+from file_handlers import handle_uploaded_file
+from database import connect_to_db, fetch_users  # Importing database functions
 
 # Load API key from Streamlit's secrets
 openai.api_key = st.secrets["openai"]["api_key"]
@@ -44,8 +46,17 @@ with st.sidebar:
     uploaded_file = st.file_uploader("Upload an attachment (optional)", type=["txt", "csv", "xlsx", "pdf", "jpg", "png", "docx"])
 
 # Handle file uploads and visualization-related tasks
-from file_handlers import handle_uploaded_file
 data, columns = handle_uploaded_file(uploaded_file)
+
+# Database connection (adjust the path as needed)
+db_path = "/home/vr-dt-100/Desktop/your_database_name.db"
+conn = connect_to_db(db_path)
+
+if conn:
+    # Fetch user details from the database
+    users = fetch_users(conn)
+    user_dict = {user[0]: {"username": user[1], "first_name": user[2], "last_name": user[3]} for user in users}
+    conn.close()  # Close the database connection
 
 # Initialize data to None by default
 x_column = None
@@ -128,6 +139,13 @@ if prompt := st.chat_input(f"Enter prompt "):
                 conversation.append({"role": "user", "content": prompt + "\n\n" + str(data)})
 
             conversation.extend(st.session_state.messages)  # Add the entire conversation history
+
+            # Check if the user is in the database and include their name in the prompt
+            if 'user_id' in st.session_state:
+                user_id = st.session_state['user_id']
+                user_info = user_dict.get(user_id)
+                if user_info:
+                    conversation.insert(1, {"role": "system", "content": f"User Info: {user_info['first_name']} {user_info['last_name']}"})
 
             # Request response from OpenAI's API using `openai.ChatCompletion.create()`
             response = openai.chat.completions.create(
