@@ -5,3 +5,4 @@ PyPDF2
 python-docx
 Pillow
 streamlit
+pdf2image
