@@ -50,18 +50,17 @@ data, columns = handle_uploaded_file(uploaded_file)
 # Initialize data to None by default
 x_column = None
 y_column = None
-if len(columns) > 0 and chart_type == "Bar Chart":
-    # Slider to select x-axis column (from dataset columns)
-    x_column_index = st.selectbox("Select X-axis column", options=columns)
-    x_column = data[x_column_index]
-    
-    # Slider to select y-axis column (from dataset columns)
-    y_column_index = st.selectbox("Select Y-axis column", options=columns)
-    y_column = data[y_column_index]
+if len(columns) > 0:
+    # Pie chart and bar chart options for selecting columns
+    if chart_type == "Bar Chart":
+        x_column_index = st.selectbox("Select X-axis column", options=columns)
+        x_column = data[x_column_index] if x_column_index else None
 
-# Conditionally display the sliders for range values of both axes for the Bar Chart
+        y_column_index = st.selectbox("Select Y-axis column", options=columns)
+        y_column = data[y_column_index] if y_column_index else None
+
+# Conditionally display the sliders for range values for both axes
 if chart_type == "Bar Chart" and x_column is not None and y_column is not None:
-    # Slider to select range for X-axis
     start_x_value, end_x_value = st.slider(
         "Select range of X-axis values to visualize",
         min_value=0,
@@ -71,7 +70,6 @@ if chart_type == "Bar Chart" and x_column is not None and y_column is not None:
         help="Select the start and end values for the X-axis"
     )
     
-    # Slider to select range for Y-axis
     start_y_value, end_y_value = st.slider(
         "Select range of Y-axis values to visualize",
         min_value=0,
@@ -81,15 +79,13 @@ if chart_type == "Bar Chart" and x_column is not None and y_column is not None:
         help="Select the start and end values for the Y-axis"
     )
 
-# Add a button to directly generate Pie Chart
-if chart_type == "Pie Chart" and x_column is not None:
-    if st.button("Generate Pie Chart"):
-        generate_pie_chart(x_column, start_x_value, end_x_value)
-
-# Add a button to directly generate Bar Chart
-if chart_type == "Bar Chart" and x_column is not None and y_column is not None:
     if st.button("Generate Bar Chart"):
         generate_bar_chart(data, x_column, y_column, start_x_value, end_x_value, start_y_value, end_y_value)
+
+# Add a button to directly generate Pie Chart
+if chart_type == "Pie Chart" and data is not None:
+    if st.button("Generate Pie Chart"):
+        generate_pie_chart(data, start_x_value, end_x_value)
 
 # Display chat messages
 for message in st.session_state.messages:

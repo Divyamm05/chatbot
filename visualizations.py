@@ -3,69 +3,29 @@ import matplotlib.pyplot as plt
 import io
 import streamlit as st
 
-# Function to preview dataset after upload
-def preview_uploaded_file(uploaded_file):
-    # Handle CSV file content
-    if uploaded_file.type == "text/csv":
-        df = pd.read_csv(uploaded_file)
-        st.write("CSV File Content:")
-        st.dataframe(df.head())  # Preview the first 5 rows of the dataset
+def preview_uploaded_file(data, num_rows=5):
+    """
+    Display the first few rows of the uploaded data to give the user a preview.
+    
+    Args:
+        data (pd.DataFrame): The uploaded dataset to preview.
+        num_rows (int): The number of rows to preview.
+    """
+    st.write("Dataset preview:")
+    st.dataframe(data.head(num_rows))
 
-    # Handle Excel file content
-    elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
-        df = pd.read_excel(uploaded_file)
-        st.write("Excel File Content:")
-        st.dataframe(df.head())  # Preview the first 5 rows of the dataset
-
-    # Handle TXT file content
-    elif uploaded_file.type == "text/plain":
-        text_content = uploaded_file.getvalue().decode("utf-8")
-        st.write("Text File Content:")
-        st.text(text_content)  # Show the text content
-
-    # Handle PDF file content
-    elif uploaded_file.type == "application/pdf":
-        import PyPDF2
-        pdf_file = PyPDF2.PdfReader(uploaded_file)
-        pdf_text = ""
-        for page in pdf_file.pages:
-            pdf_text += page.extract_text()
-        st.write("PDF File Content:")
-        st.text(pdf_text)  # Show extracted text from PDF
-
-    # Handle DOCX file content
-    elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-        import docx
-        docx_file = io.BytesIO(uploaded_file.getvalue())
-        doc = docx.Document(docx_file)
-        doc_text = ""
-        for para in doc.paragraphs:
-            doc_text += para.text + "\n"
-        st.write("DOCX File Content:")
-        st.text(doc_text)  # Show the text content from DOCX
-
-    # Handle image files (optional preview of images)
-    elif uploaded_file.type in ["image/jpeg", "image/png"]:
-        from PIL import Image
-        img = Image.open(uploaded_file)
-        st.image(img, caption="Uploaded Image", use_column_width=True)  # Preview image
-
-    else:
-        st.warning("Unsupported file type. Please upload a TXT, PDF, DOCX, or image file.")
-
-
-def generate_pie_chart(data_column, start_value, end_value):
+def generate_pie_chart(data, start_value, end_value):
     """
     Generate a pie chart based on a selected column from the dataset.
     Only the data in the range [start_value, end_value] will be visualized.
 
     Args:
-        data_column (pd.Series): The column to create the pie chart from.
+        data (pd.Series): The column to create the pie chart from.
         start_value (int): The starting index for the data range.
         end_value (int): The ending index for the data range.
     """
     # Slice the data to get the selected range
-    selected_data = data_column[start_value-1:end_value]
+    selected_data = data[start_value-1:end_value]
     
     # Generate value counts (for pie chart)
     value_counts = selected_data.value_counts()
@@ -78,10 +38,10 @@ def generate_pie_chart(data_column, start_value, end_value):
     # Display the pie chart in Streamlit
     st.pyplot(fig)
 
-
 def generate_bar_chart(data, x_column, y_column, start_x_value, end_x_value, start_y_value, end_y_value):
     """
     Generate a bar chart based on selected columns and range of data for both axes.
+    
     Args:
         data (pd.DataFrame): The dataset.
         x_column (str): The column for the X-axis.
@@ -91,9 +51,19 @@ def generate_bar_chart(data, x_column, y_column, start_x_value, end_x_value, sta
         start_y_value (int): The starting index for the Y-axis range.
         end_y_value (int): The ending index for the Y-axis range.
     """
+    # Validate if the x_column and y_column are in the dataframe
+    if x_column not in data.columns or y_column not in data.columns:
+        st.error(f"Columns {x_column} and {y_column} not found in the dataset.")
+        return
+
     # Slice the data to get the selected range for both X and Y axes
-    selected_data_x = data[x_column][start_x_value:end_x_value]
-    selected_data_y = data[y_column][start_y_value:end_y_value]
+    selected_data_x = data[x_column].iloc[start_x_value:end_x_value]
+    selected_data_y = data[y_column].iloc[start_y_value:end_y_value]
+
+    # Check if the lengths match
+    if len(selected_data_x) != len(selected_data_y):
+        st.error("The selected ranges for X and Y axes don't match in length.")
+        return
 
     # Create the bar chart
     fig, ax = plt.subplots()
@@ -106,3 +76,35 @@ def generate_bar_chart(data, x_column, y_column, start_x_value, end_x_value, sta
 
     # Display the bar chart in Streamlit
     st.pyplot(fig)
+
+def handle_uploaded_file(uploaded_file):
+    """
+    Handles the file upload and loads the appropriate dataset.
+    Args:
+        uploaded_file: The file uploaded by the user.
+    Returns:
+        data: The dataset loaded as a pandas DataFrame.
+        columns: The column names from the dataset.
+    """
+    if uploaded_file is not None:
+        # Read the file based on its type (CSV, Excel, etc.)
+        file_extension = uploaded_file.name.split('.')[-1].lower()
+        
+        if file_extension == "csv":
+            data = pd.read_csv(uploaded_file)
+        elif file_extension in ["xls", "xlsx"]:
+            data = pd.read_excel(uploaded_file)
+        elif file_extension == "json":
+            data = pd.read_json(uploaded_file)
+        else:
+            st.error("Unsupported file format")
+            return None, None
+        
+        # Display a preview of the dataset
+        preview_uploaded_file(data)
+
+        # Return the loaded dataset and its columns
+        return data, data.columns.tolist()
+    else:
+        st.error("Please upload a file first.")
+        return None, None
