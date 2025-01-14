@@ -54,7 +54,6 @@ def preview_uploaded_file(uploaded_file):
         st.warning("Unsupported file type. Please upload a TXT, PDF, DOCX, or image file.")
 
 
-# Function to generate the Pie Chart
 def generate_pie_chart(data_column, start_value, end_value):
     """
     Generate a pie chart based on a selected column from the dataset.
@@ -80,28 +79,27 @@ def generate_pie_chart(data_column, start_value, end_value):
     st.pyplot(fig)
 
 
-# Function to generate the Bar Chart
-def generate_bar_chart(data, x_axis_column, y_axis_column, start_value, end_value):
+def generate_bar_chart(data, x_column, y_column, start_value, end_value):
     """
-    Generate a bar chart based on the selected columns for X and Y axes.
-    Only the data in the range [start_value, end_value] will be visualized.
-
+    Generate a bar chart based on selected columns and range of data.
     Args:
-        data (pd.DataFrame): The data to create the bar chart from.
-        x_axis_column (str): The column for the X-axis.
-        y_axis_column (str): The column for the Y-axis.
+        data (pd.DataFrame): The dataset.
+        x_column (str): The column for the X-axis.
+        y_column (str): The column for the Y-axis.
         start_value (int): The starting index for the data range.
         end_value (int): The ending index for the data range.
     """
     # Slice the data to get the selected range
-    selected_data = data.iloc[start_value-1:end_value]
+    selected_data = data[start_value:end_value]
 
-    # Plot the bar chart
+    # Create the bar chart
     fig, ax = plt.subplots()
-    ax.bar(selected_data[x_axis_column], selected_data[y_axis_column])
-    ax.set_xlabel(x_axis_column)
-    ax.set_ylabel(y_axis_column)
-    ax.set_title(f"Bar Chart of {y_axis_column} vs {x_axis_column}")
+    ax.bar(selected_data[x_column], selected_data[y_column])
+
+    # Set chart labels and title
+    ax.set_xlabel(x_column)
+    ax.set_ylabel(y_column)
+    ax.set_title(f"Bar Chart: {y_column} vs {x_column}")
 
     # Display the bar chart in Streamlit
     st.pyplot(fig)

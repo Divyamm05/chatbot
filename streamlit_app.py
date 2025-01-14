@@ -48,67 +48,37 @@ from file_handlers import handle_uploaded_file
 data, columns = handle_uploaded_file(uploaded_file)
 
 # Initialize data to None by default
-data_column = None
-if len(columns) > 0 and chart_type in ["Pie Chart", "Bar Chart"]:
-    selected_column = st.slider(
-        "Select a column to visualize",
-        min_value=1,
-        max_value=len(columns),
-        value=1,
-        step=1,
-        format="%s"
-    )
-    column_name = columns[selected_column - 1]
-    data_column = data[column_name]
+x_column = None
+y_column = None
+if len(columns) > 0 and chart_type == "Bar Chart":
+    # Slider to select x-axis column (from dataset columns)
+    x_column_index = st.selectbox("Select X-axis column", options=columns)
+    x_column = data[x_column_index]
+    
+    # Slider to select y-axis column (from dataset columns)
+    y_column_index = st.selectbox("Select Y-axis column", options=columns)
+    y_column = data[y_column_index]
 
 # Conditionally display the slider for the number of values to visualize
-if chart_type in ["Pie Chart", "Bar Chart"] and data_column is not None:
+if chart_type == "Bar Chart" and x_column is not None and y_column is not None:
     start_value, end_value = st.slider(
         "Select range of values to visualize",
-        min_value=1, 
-        max_value=len(data_column),  # Set max value to the length of the data
-        value=(1, min(10, len(data_column))),  # Default range (start from 1 to 10 or data length)
+        min_value=0,
+        max_value=len(x_column),  # Set max value to the length of the data
+        value=(0, min(10, len(x_column))),  # Default range (start from 0 to 10 or data length)
         step=1,
         help="Select the start and end values to visualize the chart"
     )
 
 # Add a button to directly generate Pie Chart
-if chart_type == "Pie Chart" and data_column is not None:
+if chart_type == "Pie Chart" and x_column is not None:
     if st.button("Generate Pie Chart"):
-        generate_pie_chart(data_column, start_value, end_value)
+        generate_pie_chart(x_column, start_value, end_value)
 
 # Add a button to directly generate Bar Chart
-if chart_type == "Bar Chart" and data_column is not None:
-    # Ensure that the values passed to the sliders are integers (or floats if needed)
-    x_axis_min = int(data_column.min())  # Cast to integer
-    x_axis_max = int(data_column.max())  # Cast to integer
-    x_axis_default = (x_axis_min, x_axis_max)  # Default range
-
-    y_axis_min = int(data_column.min())  # Cast to integer
-    y_axis_max = int(data_column.max())  # Cast to integer
-    y_axis_default = (y_axis_min, y_axis_max)  # Default range
-
-    # Add sliders for selecting values for both axes for Bar Chart
-    x_axis_values = st.slider(
-        "Select values for X-axis",
-        min_value=x_axis_min,
-        max_value=x_axis_max,
-        value=x_axis_default,
-        step=1,
-        help="Select the range of values for the X-axis"
-    )
-
-    y_axis_values = st.slider(
-        "Select values for Y-axis",
-        min_value=y_axis_min,
-        max_value=y_axis_max,
-        value=y_axis_default,
-        step=1,
-        help="Select the range of values for the Y-axis"
-    )
-
+if chart_type == "Bar Chart" and x_column is not None and y_column is not None:
     if st.button("Generate Bar Chart"):
-        generate_bar_chart(data, x_axis_values, y_axis_values, start_value, end_value)
+        generate_bar_chart(data, x_column, y_column, start_value, end_value)
 
 # Display chat messages
 for message in st.session_state.messages:
