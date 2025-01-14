@@ -1,0 +1,7 @@
+openai
+pandas
+matplotlib
+PyPDF2
+python-docx
+Pillow
+
