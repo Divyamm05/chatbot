@@ -1,11 +1,11 @@
 import pandas as pd
 import streamlit as st
 import openai
-import json
-import os
 import sqlite3
+import os
 from utils import load_chat_history, save_chat_history
 from visualizations import generate_pie_chart, generate_bar_chart, preview_uploaded_file  # Updated import
+from file_handlers import handle_uploaded_file
 
 # Load API key from Streamlit's secrets
 openai.api_key = st.secrets["openai"]["api_key"]
@@ -43,7 +43,9 @@ def process_chat_input(prompt, db_path=DB_PATH):
     user_data = None
     if conn:
         # Extract username from the user input or chat context
-        username = "johndoe"  # Example, you can modify this based on chat context
+        username = extract_username_from_prompt(prompt)  # Function to dynamically extract the username
+        if username is None:
+            username = "johndoe"  # Fallback if username is not extracted from the prompt
 
         # Query user details
         user_data = fetch_user_details(conn, username)
@@ -53,9 +55,16 @@ def process_chat_input(prompt, db_path=DB_PATH):
     if user_data:
         response = f"Hello, {user_data[2]} {user_data[3]}! How can I assist you today?"
     else:
-        response = "User not found."
+        response = "User not found. Would you like to upload a file for chart generation instead?"
 
     return response
+
+# Function to extract username from the prompt (simple example)
+def extract_username_from_prompt(prompt):
+    # Example: If the prompt contains a username, extract it
+    if "my username is" in prompt.lower():
+        return prompt.split("my username is")[-1].strip()
+    return None
 
 # Load the previous chat history if available
 if "messages" not in st.session_state:
@@ -85,7 +94,6 @@ with st.sidebar:
     uploaded_file = st.file_uploader("Upload an attachment (optional)", type=["txt", "csv", "xlsx", "pdf", "jpg", "png", "docx"])
 
 # Handle file uploads and visualization-related tasks
-from file_handlers import handle_uploaded_file
 data, columns = handle_uploaded_file(uploaded_file)
 
 # Initialize data to None by default
