@@ -69,14 +69,21 @@ def extract_username_from_prompt(prompt):
 # Function to interact with OpenAI's GPT model (updated for OpenAI's new API)
 def ask_openai(prompt):
     try:
-        # Use the `openai.Completion.create` method for the newer API
-        response = openai.Completion.create(
-            model="gpt-3.5-turbo",  # Or use another model if needed
-            prompt=prompt,
+        # Define the conversation structure
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": prompt}
+        ]
+        
+        # Call OpenAI's new API method
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",  # You can use other available models here
+            messages=messages,  # Send the conversation messages
             max_tokens=MAX_TOKENS
         )
+        
         # Get the response content
-        return response.choices[0].text.strip()  # `text` field instead of `message`
+        return response['choices'][0]['message']['content'].strip()  # Fetch the assistant's reply
     except Exception as e:
         return f"Error: {str(e)}"
 
