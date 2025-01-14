@@ -22,10 +22,14 @@ CHAT_HISTORY_FILE = 'chat_history.json'
 
 # Function to load chat history from the file
 def load_chat_history():
-    if os.path.exists(CHAT_HISTORY_FILE):
-        with open(CHAT_HISTORY_FILE, 'r') as file:
-            return json.load(file)
-    return []
+    try:
+        if os.path.exists(CHAT_HISTORY_FILE):
+            with open(CHAT_HISTORY_FILE, 'r') as file:
+                return json.load(file)  # Load the JSON file content
+        return []  # Return an empty list if the file doesn't exist
+    except json.JSONDecodeError as e:
+        st.error(f"Error loading chat history: {e}. The file might be corrupted.")
+        return []  # Return an empty list if the file is corrupted
 
 # Function to save chat history to the file
 def save_chat_history(messages):
