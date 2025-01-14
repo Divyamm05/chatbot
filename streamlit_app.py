@@ -3,6 +3,7 @@ import streamlit as st
 import openai
 import json
 import os
+import sqlite3
 from utils import load_chat_history, save_chat_history
 from visualizations import generate_pie_chart, generate_bar_chart, preview_uploaded_file  # Updated import
 
@@ -15,6 +16,46 @@ MAX_TOKENS = 500
 
 # File to store chat history
 CHAT_HISTORY_FILE = 'chat_history.json'
+
+# SQLite Database path
+DB_PATH = "/home/vr-dt-100/Desktop/your_database_name.db"  # Update with your actual database path
+
+# Function to connect to SQLite database
+def connect_to_db(db_path):
+    try:
+        conn = sqlite3.connect(db_path)
+        print("Connected to SQLite database")
+        return conn
+    except sqlite3.Error as e:
+        print(f"Error connecting to database: {e}")
+        return None
+
+# Function to fetch user details from the database
+def fetch_user_details(conn, username):
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM user_details WHERE username=?", (username,))
+    user = cursor.fetchone()  # Fetch one user record
+    return user
+
+# Function to process chat input and query the database
+def process_chat_input(prompt, db_path=DB_PATH):
+    conn = connect_to_db(db_path)
+    user_data = None
+    if conn:
+        # Extract username from the user input or chat context
+        username = "johndoe"  # Example, you can modify this based on chat context
+
+        # Query user details
+        user_data = fetch_user_details(conn, username)
+        conn.close()
+
+    # Process the chat input
+    if user_data:
+        response = f"Hello, {user_data[2]} {user_data[3]}! How can I assist you today?"
+    else:
+        response = "User not found."
+
+    return response
 
 # Load the previous chat history if available
 if "messages" not in st.session_state:
@@ -119,25 +160,9 @@ if prompt := st.chat_input(f"Enter prompt "):
             st.spinner("Thinking...")
 
         try:
-            # Construct the conversation history as a list of messages
-            system_message = {"role": "system", "content": "You are a helpful assistant."}
-            conversation = [system_message, {"role": "user", "content": prompt}]
-
-            # If an Excel, CSV, or any other file is uploaded, include it in the conversation
-            if uploaded_file:
-                conversation.append({"role": "user", "content": prompt + "\n\n" + str(data)})
-
-            conversation.extend(st.session_state.messages)  # Add the entire conversation history
-
-            # Request response from OpenAI's API using `openai.ChatCompletion.create()`
-            response = openai.chat.completions.create(
-                model=OPENAI_MODEL,
-                messages=conversation,
-                max_tokens=MAX_TOKENS
-            )
-
-            full_response = response.choices[0].message.content
-            message_placeholder.markdown(full_response)
+            # Process the chat input
+            response = process_chat_input(prompt, DB_PATH)
+            message_placeholder.markdown(response)
 
         except Exception as e:
             st.session_state.messages.append({"role": "assistant", "content": f"Error: {str(e)}"})
