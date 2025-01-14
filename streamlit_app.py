@@ -4,7 +4,7 @@ import openai
 import json
 import os
 from utils import load_chat_history, save_chat_history, generate_chart_description
-from visualizations import generate_pie_chart, preview_uploaded_file  # Updated import
+from visualizations import generate_pie_chart, generate_bar_chart, preview_uploaded_file  # Updated import
 
 # Load API key from Streamlit's secrets
 openai.api_key = st.secrets["openai"]["api_key"]
@@ -49,17 +49,25 @@ data, columns = handle_uploaded_file(uploaded_file)
 
 # Initialize data to None by default
 data_column = None
+x_axis_column = None
+y_axis_column = None
+
 if len(columns) > 0 and chart_type in ["Pie Chart", "Bar Chart"]:
-    selected_column = st.slider(
-        "Select a column to visualize",
-        min_value=1,
-        max_value=len(columns),
-        value=1,
-        step=1,
-        format="%s"
-    )
-    column_name = columns[selected_column - 1]
-    data_column = data[column_name]
+    if chart_type == "Bar Chart":
+        # Select columns for x and y axes
+        x_axis_column = st.selectbox("Select a column for X-axis", columns)
+        y_axis_column = st.selectbox("Select a column for Y-axis", columns)
+    else:
+        selected_column = st.slider(
+            "Select a column to visualize",
+            min_value=1,
+            max_value=len(columns),
+            value=1,
+            step=1,
+            format="%s"
+        )
+        column_name = columns[selected_column - 1]
+        data_column = data[column_name]
 
 # Conditionally display the slider for the number of values to visualize
 if chart_type in ["Pie Chart", "Bar Chart"] and data_column is not None:
@@ -76,6 +84,11 @@ if chart_type in ["Pie Chart", "Bar Chart"] and data_column is not None:
 if chart_type == "Pie Chart" and data_column is not None:
     if st.button("Generate Pie Chart"):
         generate_pie_chart(data_column, start_value, end_value)
+
+# Add a button to directly generate Bar Chart
+if chart_type == "Bar Chart" and x_axis_column is not None and y_axis_column is not None:
+    if st.button("Generate Bar Chart"):
+        generate_bar_chart(data, x_axis_column, y_axis_column, start_value, end_value)
 
 # Display chat messages
 for message in st.session_state.messages:
