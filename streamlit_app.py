@@ -1,10 +1,9 @@
 import pandas as pd
 import streamlit as st
 import openai
-import json
-import os
-from utils import load_chat_history, save_chat_history, generate_chart_description
-from visualizations import generate_pie_chart, generate_bar_chart, preview_uploaded_file  # Updated import
+from utils import load_chat_history, save_chat_history
+from visualizations import generate_pie_chart, generate_bar_chart, preview_uploaded_file
+from file_handlers import handle_uploaded_file
 
 # Load API key from Streamlit's secrets
 openai.api_key = st.secrets["openai"]["api_key"]
@@ -44,7 +43,6 @@ with st.sidebar:
     uploaded_file = st.file_uploader("Upload an attachment (optional)", type=["txt", "csv", "xlsx", "pdf", "jpg", "png", "docx"])
 
 # Handle file uploads and visualization-related tasks
-from file_handlers import handle_uploaded_file
 data, columns = handle_uploaded_file(uploaded_file)
 
 # Initialize data to None by default
@@ -91,25 +89,17 @@ if chart_type == "Bar Chart" and x_column is not None and y_column is not None:
 
 # Pie chart dropdown functionality
 if chart_type == "Pie Chart" and pie_column is not None:
-    # Add debugging print statements
-    st.write("Available columns in data:", data.columns)  # Show the columns
-    st.write("Selected Pie Chart column:", pie_column)  # Show the selected pie column
+    start_value, end_value = st.slider(
+        "Select range of data for Pie Chart",
+        min_value=0,
+        max_value=len(data),  # Set max value to the length of the data
+        value=(0, min(10, len(data))),  # Default range (start from 0 to 10 or data length)
+        step=1,
+        help="Select the range of data for the Pie Chart"
+    )
 
-    if pie_column not in data.columns:
-        st.error(f"The column '{pie_column}' does not exist in the data.")
-    else:
-        start_value, end_value = st.slider(
-            "Select range of data for Pie Chart",
-            min_value=0,
-            max_value=len(data),  # Set max value to the length of the data
-            value=(0, min(10, len(data))),  # Default range (start from 0 to 10 or data length)
-            step=1,
-            help="Select the range of data for the Pie Chart"
-        )
-
-        if st.button("Generate Pie Chart"):
-            # Pass the sliced data as series (data[pie_column])
-            generate_pie_chart(data[pie_column], start_value, end_value)
+    if st.button("Generate Pie Chart"):
+        generate_pie_chart(data[pie_column.name], start_value, end_value)
 
 # Display chat messages
 for message in st.session_state.messages:
