@@ -1,14 +1,9 @@
 import openai
 import streamlit as st
-import os
 import json
-import pandas as pd
-import matplotlib.pyplot as plt
-import PyPDF2
-import docx
-import io
-from PIL import Image
-from io import BytesIO
+import os
+from utils import load_chat_history, save_chat_history, generate_chart_description
+from visualizations import generate_pie_chart
 
 # Load API key from Streamlit's secrets
 openai.api_key = st.secrets["openai"]["api_key"]
@@ -19,42 +14,6 @@ MAX_TOKENS = 500
 
 # File to store chat history
 CHAT_HISTORY_FILE = 'chat_history.json'
-
-# Function to load chat history from the file
-def load_chat_history():
-    try:
-        if os.path.exists(CHAT_HISTORY_FILE):
-            with open(CHAT_HISTORY_FILE, 'r') as file:
-                return json.load(file)  # Load the JSON file content
-        return []  # Return an empty list if the file doesn't exist
-    except json.JSONDecodeError as e:
-        st.error(f"Error loading chat history: {e}. The file might be corrupted.")
-        return []  # Return an empty list if the file is corrupted
-
-# Function to save chat history to the file
-def save_chat_history(messages):
-    with open(CHAT_HISTORY_FILE, 'w') as file:
-        json.dump(messages, file)
-
-# Function to generate a textual description of the chart
-def generate_chart_description(chart_type, data):
-    if isinstance(data, pd.Series):
-        values = data.tolist()
-        categories = data.index.tolist()
-    else:
-        categories = list(data.columns)
-        values = data.iloc[0].tolist()  # Assumes the first row of the DataFrame contains the values
-
-    if chart_type == "pie":
-        total = sum(values)
-        percentages = [f"{value:.1f}% ({value}/{total})" for value in values]
-        description = f"Pie Chart: {', '.join([f'{category}: {percentage}' for category, percentage in zip(categories, percentages)])}"
-    elif chart_type == "bar":
-        description = f"Bar Chart: Values for categories: {', '.join([f'{category}: {value}' for category, value in zip(categories, values)])}"
-    else:
-        description = "Chart type not supported."
-
-    return description
 
 # Load the previous chat history if available
 if "messages" not in st.session_state:
@@ -83,68 +42,12 @@ with st.sidebar:
     # File uploader for attachments (moved below the chart selection and slider)
     uploaded_file = st.file_uploader("Upload an attachment (optional)", type=["txt", "csv", "xlsx", "pdf", "jpg", "png", "docx"])
 
+# Handle file uploads and visualization-related tasks
+from file_handlers import handle_uploaded_file
+data, columns = handle_uploaded_file(uploaded_file)
+
 # Initialize data to None by default
-data = None
-columns = []
-
-if uploaded_file is not None:
-    st.write("Uploaded file:", uploaded_file.name)
-
-    # Handle CSV file content
-    if uploaded_file.type == "text/csv":
-        df = pd.read_csv(uploaded_file)
-        st.write("CSV File Content:")
-        st.dataframe(df.head())
-        data = df
-        columns = df.columns.tolist()
-
-    # Handle Excel file content
-    elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
-        df = pd.read_excel(uploaded_file)
-        st.write("Excel File Content:")
-        st.dataframe(df.head())
-        data = df
-        columns = df.columns.tolist()
-
-    # Handle TXT file content
-    elif uploaded_file.type == "text/plain":
-        text_content = uploaded_file.getvalue().decode("utf-8")
-        st.write("Text File Content:")
-        st.text(text_content)
-        data = pd.Series([text_content])  # Convert text to pandas Series
-
-    # Handle PDF file content
-    elif uploaded_file.type == "application/pdf":
-        pdf_file = PyPDF2.PdfReader(uploaded_file)
-        pdf_text = ""
-        for page in pdf_file.pages:
-            pdf_text += page.extract_text()
-        st.write("PDF File Content:")
-        st.text(pdf_text)
-        data = pd.Series([pdf_text])  # Convert text to pandas Series
-
-    # Handle DOCX file content
-    elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-        docx_file = io.BytesIO(uploaded_file.getvalue())
-        doc = docx.Document(docx_file)
-        doc_text = ""
-        for para in doc.paragraphs:
-            doc_text += para.text + "\n"
-        st.write("DOCX File Content:")
-        st.text(doc_text)
-        data = pd.Series([doc_text])  # Convert text to pandas Series
-
-    # Handle image files
-    elif uploaded_file.type in ["image/jpeg", "image/png"]:
-        img = Image.open(uploaded_file)
-        img = img.convert('L')
-        df = pd.DataFrame(img.getdata(), columns=['pixel'])
-        data = df.iloc[:, 0]
-
-    else:
-        st.warning("Unsupported file type. Please upload a TXT, PDF, DOCX, or image file.")
-
-# Add a slider for selecting the column to visualize
+data_column = None
 if len(columns) > 0 and chart_type in ["Pie Chart", "Bar Chart"]:
     selected_column = st.slider(
         "Select a column to visualize",
@@ -156,9 +59,6 @@ if len(columns) > 0 and chart_type in ["Pie Chart", "Bar Chart"]:
     )
     column_name = columns[selected_column - 1]
     data_column = data[column_name]
-else:
-    column_name = None
-    data_column = None
 
 # Conditionally display the slider for the number of values to visualize
 if chart_type in ["Pie Chart", "Bar Chart"] and data_column is not None:
@@ -170,26 +70,11 @@ if chart_type in ["Pie Chart", "Bar Chart"] and data_column is not None:
         step=1,
         help="Select the start and end values to visualize the chart"
     )
-else:
-    start_value, end_value = 1, 1  # Default values when no data is available
 
 # Add a button to directly generate Pie Chart
 if chart_type == "Pie Chart" and data_column is not None:
     if st.button("Generate Pie Chart"):
-        # Slice the data based on the selected range
-        selected_data = data_column.iloc[start_value-1:end_value]  # Adjusting to 0-based index
-        
-        # Count the occurrences of each category (e.g., country) in the sliced data
-        category_counts = selected_data.value_counts()
-        
-        # Generate the pie chart based on category counts
-        fig, ax = plt.subplots()
-        wedges, texts, autotexts = ax.pie(category_counts, labels=category_counts.index, autopct='%1.1f%%')
-        ax.legend(wedges, category_counts.index,
-                  title="Categories",
-                  loc="center left",
-                  bbox_to_anchor=(1, 0, 0.5, 1))
-        st.pyplot(fig)
+        generate_pie_chart(data_column, start_value, end_value)
 
 # Display chat messages
 for message in st.session_state.messages:
@@ -219,19 +104,10 @@ if prompt := st.chat_input(f"Enter prompt "):
 
             conversation.extend(st.session_state.messages)  # Add the entire conversation history
 
-            # Request response from OpenAI's API using `openai.Completion.create()` or `openai.ChatCompletion.create()`
+            # Request response from OpenAI's API using `openai.ChatCompletion.create()`
             response = openai.chat.completions.create(
                 model=OPENAI_MODEL,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a helpful assistant."
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
+                messages=conversation,
                 max_tokens=MAX_TOKENS
             )
 
