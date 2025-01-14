@@ -75,8 +75,8 @@ def ask_openai(prompt):
             {"role": "user", "content": prompt}
         ]
         
-        # Call OpenAI's new API method
-        response = openai.ChatCompletion.create(
+        # Call OpenAI's new API method using `completions.create` for v1.0.0 and above
+        response = openai.Completion.create(
             model="gpt-3.5-turbo",  # You can use other available models here
             messages=messages,  # Send the conversation messages
             max_tokens=MAX_TOKENS
