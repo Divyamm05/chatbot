@@ -51,6 +51,10 @@ def generate_bar_chart(data, x_column, y_column, start_x_value, end_x_value, sta
         start_y_value (int): The starting index for the Y-axis range.
         end_y_value (int): The ending index for the Y-axis range.
     """
+    if not isinstance(data, pd.DataFrame):
+        st.error("The uploaded file is not a valid DataFrame.")
+        return
+
     # Validate if the x_column and y_column are in the dataframe
     if x_column not in data.columns or y_column not in data.columns:
         st.error(f"Columns {x_column} and {y_column} not found in the dataset.")
