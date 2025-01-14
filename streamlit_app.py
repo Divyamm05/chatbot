@@ -235,7 +235,7 @@ if prompt := st.chat_input(f"Enter prompt "):
                 max_tokens=MAX_TOKENS
             )
 
-            full_response = response['choices'][0]['text']
+            full_response = response.choices[0].message.content
             message_placeholder.markdown(full_response)
 
         except Exception as e:
