@@ -107,4 +107,12 @@ def handle_uploaded_file(uploaded_file):
         st.error("Please upload a file first.")
         return None, None
 
+# Streamlit App UI
+st.title("Data Visualization App")
+uploaded_file = st.file_uploader("Upload your data file (CSV, Excel, JSON)")
 
+if uploaded_file:
+    data, columns = handle_uploaded_file(uploaded_file)
+    if data is not None:
+        st.subheader("Generate Bar Chart")
+        bar_chart_ui(data)
