@@ -25,7 +25,7 @@ def generate_pie_chart(data, start_value, end_value):
         end_value (int): The ending index for the data range.
     """
     # Slice the data to get the selected range
-    selected_data = data[start_value-1:end_value]
+    selected_data = data[start_value:end_value]
     
     # Generate value counts (for pie chart)
     value_counts = selected_data.value_counts()

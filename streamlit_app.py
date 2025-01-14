@@ -85,7 +85,7 @@ if chart_type == "Bar Chart" and x_column is not None and y_column is not None:
 # Add a button to directly generate Pie Chart
 if chart_type == "Pie Chart" and data is not None:
     if st.button("Generate Pie Chart"):
-        generate_pie_chart(data, start_x_value, end_x_value)
+        generate_pie_chart(data, start_value=0, end_value=min(10, len(data)))
 
 # Display chat messages
 for message in st.session_state.messages:
