@@ -35,6 +35,9 @@ def generate_pie_chart(data, start_value, end_value):
     ax.pie(value_counts, labels=value_counts.index, autopct='%1.1f%%', startangle=90)
     ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
 
+    # Rotate the labels to prevent clutter
+    plt.xticks(rotation=45)  # Rotate labels at a 45-degree angle
+
     # Display the pie chart in Streamlit
     st.pyplot(fig)
 
@@ -77,6 +80,9 @@ def generate_bar_chart(data, x_column, y_column, start_x_value, end_x_value, sta
     ax.set_xlabel(x_column)
     ax.set_ylabel(y_column)
     ax.set_title(f"Bar Chart: {y_column} vs {x_column}")
+
+    # Rotate the X-axis labels to prevent clutter
+    plt.xticks(rotation=45)  # Rotate labels at a 45-degree angle
 
     # Display the bar chart in Streamlit
     st.pyplot(fig)

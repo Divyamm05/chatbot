@@ -1,9 +1,10 @@
 import pandas as pd
 import streamlit as st
 import openai
-from utils import load_chat_history, save_chat_history
+import json
+import os
+from utils import load_chat_history, save_chat_history, generate_chart_description
 from visualizations import generate_pie_chart, generate_bar_chart, preview_uploaded_file
-from file_handlers import handle_uploaded_file
 
 # Load API key from Streamlit's secrets
 openai.api_key = st.secrets["openai"]["api_key"]
@@ -43,6 +44,7 @@ with st.sidebar:
     uploaded_file = st.file_uploader("Upload an attachment (optional)", type=["txt", "csv", "xlsx", "pdf", "jpg", "png", "docx"])
 
 # Handle file uploads and visualization-related tasks
+from file_handlers import handle_uploaded_file
 data, columns = handle_uploaded_file(uploaded_file)
 
 # Initialize data to None by default
@@ -89,6 +91,7 @@ if chart_type == "Bar Chart" and x_column is not None and y_column is not None:
 
 # Pie chart dropdown functionality
 if chart_type == "Pie Chart" and pie_column is not None:
+    # Dropdown for Pie Chart column selection
     start_value, end_value = st.slider(
         "Select range of data for Pie Chart",
         min_value=0,
@@ -99,7 +102,7 @@ if chart_type == "Pie Chart" and pie_column is not None:
     )
 
     if st.button("Generate Pie Chart"):
-        generate_pie_chart(data[pie_column.name], start_value, end_value)
+        generate_pie_chart(data[pie_column], start_value, end_value)
 
 # Display chat messages
 for message in st.session_state.messages:
