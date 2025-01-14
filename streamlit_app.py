@@ -211,8 +211,7 @@ if prompt := st.chat_input(f"Enter prompt "):
         try:
             # Construct the conversation history as a list of messages
             system_message = {"role": "system", "content": "You are a helpful assistant."}
-            conversation = [{"role": "system", "content": "You are a helpful assistant."}]
-            conversation.append({"role": "user", "content": prompt})
+            conversation = [system_message, {"role": "user", "content": prompt}]
 
             # If an Excel, CSV, or any other file is uploaded, include it in the conversation
             if uploaded_file:
@@ -220,15 +219,13 @@ if prompt := st.chat_input(f"Enter prompt "):
 
             conversation.extend(st.session_state.messages)  # Add the entire conversation history
 
-            # Request response from OpenAI's chat API using `openai.ChatCompletion.create`
+            # Request response from OpenAI's API using `openai.ChatCompletion.create()`
             response = openai.ChatCompletion.create(
                 model=OPENAI_MODEL,
-                messages=conversation,
-                max_tokens=MAX_TOKENS,
-                temperature=0.7
+                messages=conversation
             )
 
-            full_response = response['choices'][0]['message']['content'].strip()
+            full_response = response['choices'][0]['message']['content']
             message_placeholder.markdown(full_response)
 
             # Check if the user selected a chart type and generate the corresponding chart
