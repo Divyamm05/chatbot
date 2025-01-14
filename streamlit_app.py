@@ -82,10 +82,20 @@ if chart_type == "Bar Chart" and x_column is not None and y_column is not None:
     if st.button("Generate Bar Chart"):
         generate_bar_chart(data, x_column, y_column, start_x_value, end_x_value, start_y_value, end_y_value)
 
-# Add a button to directly generate Pie Chart
+# Pie chart slider functionality
 if chart_type == "Pie Chart" and data is not None:
+    # Range slider for Pie Chart
+    start_value, end_value = st.slider(
+        "Select range of data for Pie Chart",
+        min_value=0,
+        max_value=len(data),  # Set max value to the length of the data
+        value=(0, min(10, len(data))),  # Default range (start from 0 to 10 or data length)
+        step=1,
+        help="Select the range of data for the Pie Chart"
+    )
+
     if st.button("Generate Pie Chart"):
-        generate_pie_chart(data, start_value=0, end_value=min(10, len(data)))
+        generate_pie_chart(data, start_value, end_value)
 
 # Display chat messages
 for message in st.session_state.messages:
