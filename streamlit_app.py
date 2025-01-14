@@ -43,6 +43,10 @@ with st.sidebar:
     # File uploader for attachments (moved below the chart selection and slider)
     uploaded_file = st.file_uploader("Upload an attachment (optional)", type=["txt", "csv", "xlsx", "pdf", "jpg", "png", "docx"])
 
+# Preview the file content
+if uploaded_file is not None:
+    preview_uploaded_file(uploaded_file)
+
 # Handle file uploads and visualization-related tasks
 from file_handlers import handle_uploaded_file
 data, columns = handle_uploaded_file(uploaded_file)
