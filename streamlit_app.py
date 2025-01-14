@@ -22,21 +22,25 @@ if "messages" not in st.session_state:
 
 # Sidebar for chart selection and file attachment
 with st.sidebar:
-    st.title('🤖💬 Chatbot')
+    col1, col2 = st.columns([3, 1])
 
-    # Sidebar: Start New Chat button
-    if st.button('Start New Chat'):
-        st.session_state.messages = []  # Clears the chat history
-        save_chat_history(st.session_state.messages)  # Save the empty history
-        st.rerun()  # Rerun the app to refresh the interface
+    # Sidebar: Add chatbot title
+    st.title('🤖💬 CHATBOT')
+    
+    # "Start New Chat" button clears chat history
+    with col1:
+        if st.button('Start New Chat'):
+            st.session_state.messages = []
+            save_chat_history(st.session_state.messages)
+            st.rerun()
 
-    # Sidebar: Select chart type
+    # Dropdown for chart selection
     chart_type = st.selectbox(
         "Select a chart type for visualization",
         ("Select a chart", "Pie Chart", "Bar Chart")
     )
 
-    # File uploader for attachments
+    # File uploader
     uploaded_file = st.file_uploader(
         "Upload an attachment (optional)",
         type=["txt", "csv", "xlsx", "pdf", "jpg", "png", "docx"]
@@ -46,50 +50,49 @@ with st.sidebar:
 from file_handlers import handle_uploaded_file
 data, columns = handle_uploaded_file(uploaded_file)
 
-# Initialize data to None by default
-x_column = None
-y_column = None
-pie_column = None
+# Initialize variables
+x_column = y_column = pie_column = None
 
-if len(columns) > 0:
-    # Visualization options based on chart type
+if columns:
     if chart_type == "Bar Chart":
-        x_column_name = st.selectbox("Select X-axis column", options=columns)
-        y_column_name = st.selectbox("Select Y-axis column", options=columns)
-
-        if x_column_name and y_column_name:
-            # Bar chart range slider for selecting data range
-            data_length = len(data)
-            value_range = st.slider(
-                "Select data range for Bar Chart",
-                0, data_length, (0, min(10, data_length)),
-                step=1, help="Select range of rows for bar chart visualization"
-            )
-
-            if st.button("Generate Bar Chart"):
-                generate_bar_chart(data, x_column_name, y_column_name, value_range)
+        x_column = st.selectbox("Select X-axis column", options=columns)
+        y_column = st.selectbox("Select Y-axis column", options=columns)
 
     elif chart_type == "Pie Chart":
-        pie_column_name = st.selectbox("Select column for Pie Chart", options=columns)
+        pie_column = st.selectbox("Select column for Pie Chart", options=columns)
 
-        if pie_column_name:
-            data_length = len(data)
-            value_range = st.slider(
-                "Select range of data for Pie Chart",
-                0, data_length, (0, min(10, data_length)),
-                step=1, help="Select data range for pie chart visualization"
-            )
+# Slider and chart generation logic
+if chart_type == "Bar Chart" and x_column and y_column:
+    start_value, end_value = st.slider(
+        "Select data range for visualization",
+        min_value=0,
+        max_value=len(data),
+        value=(0, min(10, len(data))),
+        step=1
+    )
 
-            if st.button("Generate Pie Chart"):
-                generate_pie_chart(data, pie_column_name, value_range[0], value_range[1])
+    if st.button("Generate Bar Chart"):
+        generate_bar_chart(data, x_column, y_column, start_value, end_value)
+
+if chart_type == "Pie Chart" and pie_column:
+    start_value, end_value = st.slider(
+        "Select range of data for Pie Chart",
+        min_value=0,
+        max_value=len(data),
+        value=(0, min(10, len(data))),
+        step=1
+    )
+
+    if st.button("Generate Pie Chart"):
+        generate_pie_chart(data, pie_column, start_value, end_value)
 
 # Display chat messages
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# User input for the prompt
-if prompt := st.chat_input("Enter prompt"):
+# User prompt input
+if prompt := st.chat_input("Enter prompt:"):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -101,23 +104,22 @@ if prompt := st.chat_input("Enter prompt"):
             st.spinner("Thinking...")
 
         try:
-            # Construct the conversation history
+            # Prepare conversation for OpenAI API
             system_message = {"role": "system", "content": "You are a helpful assistant."}
-            conversation = [system_message, {"role": "user", "content": prompt}]
-            
-            if uploaded_file:
-                conversation.append({"role": "user", "content": prompt + "\n\n" + str(data)})
-            
-            conversation.extend(st.session_state.messages)
+            conversation = [system_message] + st.session_state.messages
 
-            # Request response from OpenAI API
+            if uploaded_file:
+                conversation.append({"role": "user", "content": str(data)})
+
+            # OpenAI API call using correct interface
             response = openai.ChatCompletion.create(
                 model=OPENAI_MODEL,
                 messages=conversation,
                 max_tokens=MAX_TOKENS
             )
-            
-            full_response = response.choices[0].message.content
+
+            full_response = response["choices"][0]["message"]["content"]
+            st.session_state.messages.append({"role": "assistant", "content": full_response})
             message_placeholder.markdown(full_response)
 
         except Exception as e:
