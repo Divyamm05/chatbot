@@ -50,6 +50,7 @@ data, columns = handle_uploaded_file(uploaded_file)
 # Initialize data to None by default
 x_column = None
 y_column = None
+pie_column = None  # Variable to store selected Pie Chart column
 if len(columns) > 0:
     # Pie chart and bar chart options for selecting columns
     if chart_type == "Bar Chart":
@@ -58,6 +59,11 @@ if len(columns) > 0:
 
         y_column_index = st.selectbox("Select Y-axis column", options=columns)
         y_column = data[y_column_index] if y_column_index else None
+
+    elif chart_type == "Pie Chart":
+        # Add the column selection for Pie Chart using dropdown
+        pie_column_index = st.selectbox("Select column for Pie Chart", options=columns)
+        pie_column = data[pie_column_index] if pie_column_index else None
 
 # Conditionally display the sliders for range values for both axes
 if chart_type == "Bar Chart" and x_column is not None and y_column is not None:
@@ -82,9 +88,9 @@ if chart_type == "Bar Chart" and x_column is not None and y_column is not None:
     if st.button("Generate Bar Chart"):
         generate_bar_chart(data, x_column, y_column, start_x_value, end_x_value, start_y_value, end_y_value)
 
-# Pie chart slider functionality
-if chart_type == "Pie Chart" and data is not None:
-    # Range slider for Pie Chart
+# Pie chart dropdown functionality
+if chart_type == "Pie Chart" and pie_column is not None:
+    # Dropdown for Pie Chart column selection
     start_value, end_value = st.slider(
         "Select range of data for Pie Chart",
         min_value=0,
@@ -95,7 +101,7 @@ if chart_type == "Pie Chart" and data is not None:
     )
 
     if st.button("Generate Pie Chart"):
-        generate_pie_chart(data, start_value, end_value)
+        generate_pie_chart(data, pie_column, start_value, end_value)
 
 # Display chat messages
 for message in st.session_state.messages:
