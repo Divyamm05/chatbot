@@ -4,4 +4,4 @@ matplotlib
 PyPDF2
 python-docx
 Pillow
-
+streamlit
