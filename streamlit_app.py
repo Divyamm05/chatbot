@@ -219,28 +219,16 @@ if prompt := st.chat_input(f"Enter prompt "):
 
             conversation.extend(st.session_state.messages)  # Add the entire conversation history
 
-            # Request response from OpenAI's API using `openai.ChatCompletion.create()`
-            response = openai.ChatCompletion.create(
+            # Request response from OpenAI's API using `openai.Completion.create()` or `openai.ChatCompletion.create()`
+            response = openai.Completion.create(
                 model=OPENAI_MODEL,
-                messages=conversation
+                prompt=prompt,
+                max_tokens=MAX_TOKENS,
+                stop=None
             )
 
-            full_response = response['choices'][0]['message']['content']
+            full_response = response['choices'][0]['text']
             message_placeholder.markdown(full_response)
-
-            # Check if the user selected a chart type and generate the corresponding chart
-            if chart_type == "Pie Chart" and "pie chart" in full_response.lower():
-                chart_desc = generate_chart_description("pie", category_counts)  # Generate description based on categorical data
-                message_placeholder.markdown(chart_desc)
-                
-                # Generate the pie chart for the category counts
-                fig, ax = plt.subplots()
-                wedges, texts, autotexts = ax.pie(category_counts, labels=category_counts.index, autopct='%1.1f%%')
-                ax.legend(wedges, category_counts.index,
-                          title="Categories",
-                          loc="center left",
-                          bbox_to_anchor=(1, 0, 0.5, 1))
-                st.pyplot(fig)
 
         except Exception as e:
             st.session_state.messages.append({"role": "assistant", "content": f"Error: {str(e)}"})
