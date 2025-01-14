@@ -4,7 +4,7 @@ import openai
 import json
 import os
 from utils import load_chat_history, save_chat_history
-from visualizations import generate_pie_chart, generate_bar_chart, preview_uploaded_file  # Updated import
+from visualizations import generate_pie_chart, generate_bar_chart, preview_uploaded_file
 
 # Load API key from Streamlit's secrets
 openai.api_key = st.secrets["openai"]["api_key"]
@@ -123,7 +123,7 @@ if prompt := st.chat_input(f"Enter prompt "):
             conversation.extend(st.session_state.messages)  # Add the entire conversation history
 
             # Request response from OpenAI's API using the new method
-            response = openai.Completion.create(
+            response = openai.ChatCompletion.create(
                 model=OPENAI_MODEL,
                 messages=conversation,
                 max_tokens=MAX_TOKENS
