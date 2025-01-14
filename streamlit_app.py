@@ -13,7 +13,7 @@ openai.api_key = st.secrets["openai"]["api_key"]
 
 # Set model parameters
 OPENAI_MODEL = "gpt-3.5-turbo"
-MAX_TOKENS = 500
+MAX_TOKENS = 2500
 
 # File to store chat history
 CHAT_HISTORY_FILE = 'chat_history.json'
