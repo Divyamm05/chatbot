@@ -52,6 +52,7 @@ data, columns = handle_uploaded_file(uploaded_file)
 db_path = "/home/vr-dt-100/Desktop/your_database_name.db"
 conn = connect_to_db(db_path)
 
+user_dict = {}  # Default empty dictionary
 if conn:
     # Fetch user details from the database
     users = fetch_users(conn)
@@ -91,7 +92,6 @@ if chart_type == "Bar Chart" and x_column is not None and y_column is not None:
     if st.button("Generate Bar Chart"):
         # Pass column names as strings (use .name to get the column name)
         generate_bar_chart(data, x_column.name, y_column.name, start_value, end_value, start_value, end_value)
-
 
 # Pie chart dropdown functionality
 if chart_type == "Pie Chart" and pie_column is not None:
