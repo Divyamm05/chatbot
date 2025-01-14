@@ -4,6 +4,7 @@ import docx
 from PIL import Image
 import io
 from pdf2image import convert_from_path
+import fitz  # PyMuPDF
 
 def handle_uploaded_file(uploaded_file):
     data = None
@@ -27,15 +28,15 @@ def handle_uploaded_file(uploaded_file):
             text_content = uploaded_file.getvalue().decode("utf-8")
             data = text_content  # Directly return the text content
 
-        # Handle PDF file content (text extraction)
+        # Handle PDF file content (text extraction with PyPDF2)
         elif uploaded_file.type == "application/pdf":
             pdf_file = PyPDF2.PdfReader(uploaded_file)
             pdf_text = ""
             for page in pdf_file.pages:
                 pdf_text += page.extract_text()
-            data = pdf_text  # Directly return the extracted text
+            data = {"text": pdf_text}  # Store text in a dictionary
 
-            # Extract images from PDF using pdf2image
+            # Extract images from PDF pages using pdf2image
             images = convert_from_path(uploaded_file)
             img_files = []
             for idx, img in enumerate(images):
@@ -43,8 +44,11 @@ def handle_uploaded_file(uploaded_file):
                 img_path = f"page_{idx + 1}.jpg"
                 img.save(img_path, 'JPEG')
                 img_files.append(img_path)
-            # Optionally, return the list of image paths or handle the images
-            data = {"text": pdf_text, "images": img_files}
+            data["page_images"] = img_files  # Store the page images in the dictionary
+
+            # Optionally, extract embedded images from PDF using PyMuPDF
+            embedded_images = extract_images_from_pdf(uploaded_file)
+            data["embedded_images"] = embedded_images  # Store embedded images
 
         # Handle DOCX file content
         elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
@@ -66,3 +70,21 @@ def handle_uploaded_file(uploaded_file):
             raise ValueError("Unsupported file type")
 
     return data, columns
+
+
+def extract_images_from_pdf(pdf_file):
+    """Extract embedded images from a PDF using PyMuPDF."""
+    doc = fitz.open(pdf_file)
+    image_list = []
+    
+    for page_num in range(doc.page_count):
+        page = doc.load_page(page_num)
+        img_list = page.get_images(full=True)
+        
+        for img_index, img in enumerate(img_list):
+            xref = img[0]
+            base_image = doc.extract_image(xref)
+            image_data = base_image["image"]  # This is a byte stream of the image
+            image_list.append(image_data)  # You can process or save this image
+            
+    return image_list
