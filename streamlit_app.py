@@ -8,10 +8,7 @@ from database import connect_to_db, execute_dynamic_query
 
 # Load API key from Streamlit's secrets
 openai.api_key = st.secrets["openai"]["api_key"]
-
-# Load database path from the .toml file
-config = toml.load("config.toml")
-db_path = config["database"]["path"]
+db_path = st.secrets["database"]["path"]
 
 # Set model parameters
 OPENAI_MODEL = "gpt-3.5-turbo"
