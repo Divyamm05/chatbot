@@ -6,10 +6,11 @@ from utils import load_chat_history, save_chat_history
 from visualizations import generate_pie_chart, generate_bar_chart
 from file_handlers import handle_uploaded_file
 from database import connect_to_db, execute_dynamic_query
+import os
 
 # Load API key from Streamlit's secrets
 openai.api_key = st.secrets["openai"]["api_key"]
-db_path = "/home/vr-dt-100/Desktop/.db"
+db_path = "/home/vr-dt-100/Desktop/my_database.db"
 
 # Set model parameters
 OPENAI_MODEL = "gpt-3.5-turbo"
@@ -24,15 +25,15 @@ if "messages" not in st.session_state:
 
 # Sidebar for chart selection and file attachment
 with st.sidebar:
-    col1, col2 = st.columns([3, 1])  # Create two columns in the sidebar for layout
+    col1, col2 = st.columns([3, 1])
 
     st.title('🤖💬 CHATBOT')
 
     with col1:
         if st.button('Start New Chat'):
-            st.session_state.messages = []  # Clears the chat history
-            save_chat_history(st.session_state.messages)  # Save the empty history
-            st.rerun()  # Rerun the app to refresh the interface
+            st.session_state.messages = []
+            save_chat_history(st.session_state.messages)
+            st.rerun()
 
     chart_type = st.selectbox(
         "Select a chart type for visualization",
@@ -84,6 +85,9 @@ if chart_type == "Pie Chart" and pie_column is not None:
 
 # Connect to the database
 conn = connect_to_db(db_path)
+
+if not conn:
+    st.error("Could not connect to the database. Please check the database path and ensure the file exists.")
 
 # Handle user prompt for database queries
 def handle_user_prompt(prompt, conn):
