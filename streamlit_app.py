@@ -1,157 +1,65 @@
-import openai
+import sqlite3
+import os
 import streamlit as st
-import toml
-from utils import load_chat_history, save_chat_history
-from visualizations import generate_pie_chart, generate_bar_chart
-from file_handlers import handle_uploaded_file
-from database import connect_to_db, execute_dynamic_query
 
-# Load API key from Streamlit's secrets
-openai.api_key = st.secrets["openai"]["api_key"]
+# Database path
 db_path = "/home/vr-dt-100/Desktop/database2.db"
 
-# Set model parameters
-OPENAI_MODEL = "gpt-3.5-turbo"
-MAX_TOKENS = 2500
+def connect_to_db(db_path):
+    """
+    Connect to the SQLite database at the given path. Returns the connection or None if an error occurs.
+    """
+    try:
+        # Check if the database file exists
+        if not os.path.exists(db_path):
+            st.error(f"Database file not found at: {db_path}")
+            return None
+        
+        # Establish connection to the database
+        conn = sqlite3.connect(db_path)
+        st.success(f"Successfully connected to the database at: {db_path}")
+        return conn
+    except sqlite3.Error as e:
+        st.error(f"SQLite error: {e}")
+        return None
+    except Exception as e:
+        st.error(f"Unexpected error: {e}")
+        return None
 
-# File to store chat history
-CHAT_HISTORY_FILE = 'chat_history.json'
+# Streamlit App Layout
+st.title("Database Connection Test")
 
-# Load the previous chat history if available
-if "messages" not in st.session_state:
-    st.session_state.messages = load_chat_history()
-
-# Sidebar for chart selection and file attachment
-with st.sidebar:
-    col1, col2 = st.columns([3, 1])  # Create two columns in the sidebar for layout
-    
-    # Sidebar: Add a dropdown menu for selecting chart type
-    st.title('🤖💬 CHATBOT')
-    
-    with col1:
-        # Sidebar: Add the "Start New Chat" button next to the title
-        if st.button('Start New Chat'):
-            st.session_state.messages = []  # Clears the chat history
-            save_chat_history(st.session_state.messages)  # Save the empty history
-            st.rerun()  # Rerun the app to refresh the interface
-
-    # Sidebar: Add a dropdown menu for selecting chart type
-    chart_type = st.selectbox(
-        "Select a chart type for visualization",
-        ("Select a chart", "Pie Chart", "Bar Chart")
-    )
-
-    # File uploader for attachments (moved below the chart selection and slider)
-    uploaded_file = st.file_uploader("Upload an attachment (optional)", type=["txt", "csv", "xlsx", "pdf", "jpg", "png", "docx"])
-
-# Handle file uploads and visualization-related tasks
-data, columns = handle_uploaded_file(uploaded_file)
-
-# Initialize data to None by default
-x_column = None
-y_column = None
-pie_column = None  # Variable to store selected Pie Chart column
-if len(columns) > 0:
-    # Pie chart and bar chart options for selecting columns
-    if chart_type == "Bar Chart":
-        x_column_index = st.selectbox("Select X-axis column", options=columns)
-        x_column = data[x_column_index] if x_column_index else None
-
-        y_column_index = st.selectbox("Select Y-axis column", options=columns)
-        y_column = data[y_column_index] if y_column_index else None
-
-    elif chart_type == "Pie Chart":
-        # Add the column selection for Pie Chart using dropdown
-        pie_column_index = st.selectbox("Select column for Pie Chart", options=columns)
-        pie_column = data[pie_column_index] if pie_column_index else None
-
-# Conditionally display the sliders for range values for both axes
-if chart_type == "Bar Chart" and x_column is not None and y_column is not None:
-    # Single slider for both X and Y axis
-    start_value, end_value = st.slider(
-        "Select range of values to visualize",
-        min_value=0,
-        max_value=len(x_column),  # Set max value to the length of the data
-        value=(0, min(10, len(x_column))),  # Default range (start from 0 to 10 or data length)
-        step=1,
-        help="Select the start and end values for both X and Y axes"
-    )
-
-    if st.button("Generate Bar Chart"):
-        # Pass column names as strings (use .name to get the column name)
-        generate_bar_chart(data, x_column.name, y_column.name, start_value, end_value, start_value, end_value)
-
-
-# Pie chart dropdown functionality
-if chart_type == "Pie Chart" and pie_column is not None:
-    # Dropdown for Pie Chart column selection
-    start_value, end_value = st.slider(
-        "Select range of data for Pie Chart",
-        min_value=0,
-        max_value=len(data),  # Set max value to the length of the data
-        value=(0, min(10, len(data))),  # Default range (start from 0 to 10 or data length)
-        step=1,
-        help="Select the range of data for the Pie Chart"
-    )
-
-    if st.button("Generate Pie Chart"):
-        # Ensure that pie_column is not empty or None
-        if pie_column is not None and not pie_column.empty:
-            generate_pie_chart(data, pie_column.name, start_value, end_value)
-        else:
-            st.error("Please select a valid column for the Pie Chart")
-
-# Database interaction: Connect and execute queries
-if db_path:
+# Button to test connection
+if st.button("Test Database Connection"):
     conn = connect_to_db(db_path)
+    
     if conn:
-        table_name = 'your_table'  # Example table name
-        column_name = 'your_column'  # Example column name
-        search_value = 'search_term'  # Example search value
-        result, error = execute_dynamic_query(conn, table_name, column_name, search_value)
-        if error:
-            st.error(error)
-        else:
-            st.write(result)
-    else:
-        st.error("Could not connect to the database. Please check the database path.")
-
-# Display chat messages
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
-# User input for the prompt
-if prompt := st.chat_input(f"Enter prompt "):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
-
-    with st.chat_message("assistant"):
-        message_placeholder = st.empty()
-        with message_placeholder:
-            st.markdown("**Generating response...**")
-            st.spinner("Thinking...")
-
+        st.write("Database connection is valid!")
+        # Example query to fetch table names
         try:
-            # Construct the conversation history as a list of messages
-            system_message = {"role": "system", "content": "You are a helpful assistant."}
-            conversation = [{"role": "user", "content": prompt}]
-            conversation.extend(st.session_state.messages)  # Add the entire conversation history
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+            tables = cursor.fetchall()
+            if tables:
+                st.write("Available tables in the database:")
+                for table in tables:
+                    st.write(f"- {table[0]}")
+            else:
+                st.write("No tables found in the database.")
+        except sqlite3.Error as e:
+            st.error(f"Error fetching tables: {e}")
+        finally:
+            conn.close()
+    else:
+        st.error("Failed to connect to the database.")
 
-            # Request response from OpenAI's API using `openai.chat.completions.create()` for version 1.0.0
-            response = openai.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=conversation,
-            max_tokens=MAX_TOKENS
-            )
+# Display database path for reference
+st.write(f"Database Path: `{db_path}`")
 
-            full_response = response.choices[0].message.content
-            message_placeholder.markdown(full_response)
-
-        except Exception as e:
-            st.session_state.messages.append({"role": "assistant", "content": f"Error: {str(e)}"})
-            message_placeholder.markdown(f"Error: {str(e)}")
-
-# Save the updated chat history to the file
-save_chat_history(st.session_state.messages)
+# Instructions for resolving common issues
+st.info("""
+### Troubleshooting Tips:
+- Ensure the file path is correct and the database file exists.
+- Verify file permissions for the database.
+- Ensure the correct database format (SQLite).
+""")
