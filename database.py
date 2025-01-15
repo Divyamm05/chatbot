@@ -53,17 +53,34 @@ def get_table_columns(conn):
 def execute_dynamic_query(conn, table_name, column_name, search_value):
     """
     Executes a dynamic SQL query to search for a value in a specified column of a specified table.
+    After querying, it verifies the results and handles ambiguity by requesting clarification if needed.
     """
     try:
         cursor = conn.cursor()
         query = f"SELECT * FROM {table_name} WHERE {column_name} LIKE ?"
         cursor.execute(query, ('%' + search_value + '%',))
         results = cursor.fetchall()
-        return results
+
+        # If no results are found
+        if len(results) == 0:
+            return None, f"No records found for '{search_value}' in the column '{column_name}' of the table '{table_name}'."
+
+        # If exactly one result is found, return it
+        if len(results) == 1:
+            return results[0], None  # Return the entire row (or specific column data if needed)
+
+        # If multiple results are found, ask for clarification
+        clarification_message = f"Multiple records found for '{search_value}' in the column '{column_name}' of the table '{table_name}':\n"
+        for i, result in enumerate(results, 1):
+            clarification_message += f"{i}. {result}\n"
+
+        clarification_message += f"Please provide more details (e.g., another keyword or ID) to narrow down the search."
+
+        return None, clarification_message
+
     except sqlite3.Error as e:
         print(f"SQLite error: {e}")
-        return []
+        return None, f"An error occurred while querying the table '{table_name}'."
     except Exception as e:
         print(f"Unexpected error: {e}")
-        return []
-
+        return None, "An unexpected error occurred."
