@@ -50,10 +50,14 @@ data, columns = handle_uploaded_file(uploaded_file)
 
 # Database connection and schema inspection
 conn = connect_to_db()  # Connect to the database
+
+# Add a check for successful connection
 if conn:
     tables_columns = fetch_tables_and_columns(conn)  # Get available tables and columns
+else:
+    tables_columns = {}
 
-# Display available tables in the sidebar
+# Display available tables in the sidebar only if tables_columns is valid
 if tables_columns:
     table_names = list(tables_columns.keys())
     table_name = st.selectbox("Select a table to query", options=["Select a table"] + table_names)
@@ -70,6 +74,8 @@ if tables_columns:
                     st.write(row)
             else:
                 st.write(f"No results found for '{search_value}' in {table_name}.")
+else:
+    st.error("Could not connect to the database. Please check your database configuration.")
 
 # Chart generation functionality (Bar Chart and Pie Chart)
 x_column = None
