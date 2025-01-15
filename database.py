@@ -32,6 +32,19 @@ def execute_dynamic_query(conn, table_name, column_name, search_value):
     """
     try:
         cursor = conn.cursor()
+
+        # Ensure that the table and column exist in the database schema
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table_name,))
+        table_exists = cursor.fetchone()
+        if not table_exists:
+            return None, f"The table '{table_name}' does not exist in the database."
+
+        cursor.execute(f"PRAGMA table_info({table_name})")
+        columns = [col[1] for col in cursor.fetchall()]
+        if column_name not in columns:
+            return None, f"The column '{column_name}' does not exist in the table '{table_name}'."
+
+        # Query with LIKE to find matching values
         query = f"SELECT * FROM {table_name} WHERE {column_name} LIKE ?"
         cursor.execute(query, ('%' + search_value + '%',))
         results = cursor.fetchall()
