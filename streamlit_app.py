@@ -1,8 +1,8 @@
 import openai
-import os
 import streamlit as st
 import requests  # Added for downloading the .db file from GitHub
 import sqlite3
+import os
 from utils import load_chat_history, save_chat_history
 from visualizations import generate_pie_chart, generate_bar_chart
 from file_handlers import handle_uploaded_file
@@ -65,6 +65,17 @@ def get_table_names(conn):
         st.error(f"Error querying the database: {e}")
         return []
 
+# Function to get the column names from a table
+def get_column_names(conn, table_name):
+    try:
+        cursor = conn.cursor()
+        cursor.execute(f"PRAGMA table_info({table_name});")
+        columns = cursor.fetchall()
+        return [column[1] for column in columns]  # Return only column names
+    except sqlite3.DatabaseError as e:
+        st.error(f"Error querying column names for table '{table_name}': {e}")
+        return []
+
 # Initialize database connection
 conn = connect_to_db("database2.db")
 if conn is None:
@@ -74,7 +85,7 @@ else:
     if not table_names:
         st.error("No tables found in the database.")
     else:
-        st.write("Available tables:", table_names)
+        selected_table = st.selectbox("Select a table to query", table_names)
 
 # Sidebar for chart selection and file attachment
 with st.sidebar:
@@ -156,18 +167,23 @@ if chart_type == "Pie Chart" and pie_column is not None:
         else:
             st.error("Please select a valid column for the Pie Chart")
 
-# Database interaction: Connect and execute queries
-if conn:
-    table_name = 'your_table'  # Example table name
-    column_name = 'your_column'  # Example column name
-    search_value = 'search_term'  # Example search value
-    result, error = execute_dynamic_query(conn, table_name, column_name, search_value)
-    if error:
-        st.error(error)
+# Database interaction: Connect and execute queries on selected table
+if conn and selected_table:
+    column_names = get_column_names(conn, selected_table)
+    if column_names:
+        selected_column = st.selectbox("Select a column to query", column_names)
+        search_value = st.text_input("Enter value to search for", "")
+
+        if search_value:
+            result, error = execute_dynamic_query(conn, selected_table, selected_column, search_value)
+            if error:
+                st.error(error)
+            else:
+                st.write(result)
     else:
-        st.write(result)
+        st.error("No columns found in the selected table.")
 else:
-    st.error("Could not connect to the database. Please check the database path.")
+    st.error("Could not connect to the database or table selection failed.")
 
 # Display chat messages
 for message in st.session_state.messages:
