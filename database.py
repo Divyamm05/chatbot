@@ -25,10 +25,10 @@ def connect_to_db(db_path):
         return None
 
 
-def execute_dynamic_query(conn, table_name, column_name, search_value):
+def execute_dynamic_query(conn, table_name, column_name, search_value, exact_match=False):
     """
     Executes a dynamic SQL query to search for a value in a specified column of a specified table.
-    After querying, it verifies the results and handles ambiguity by requesting clarification if needed.
+    If exact_match is True, uses '=' for exact matching, otherwise uses 'LIKE'.
     """
     try:
         cursor = conn.cursor()
@@ -44,9 +44,13 @@ def execute_dynamic_query(conn, table_name, column_name, search_value):
         if column_name not in columns:
             return None, f"The column '{column_name}' does not exist in the table '{table_name}'."
 
-        # Query with LIKE to find matching values
-        query = f"SELECT * FROM {table_name} WHERE {column_name} LIKE ?"
-        cursor.execute(query, ('%' + search_value + '%',))
+        # Choose between LIKE or = based on exact_match
+        if exact_match:
+            query = f"SELECT * FROM {table_name} WHERE {column_name} = ?"
+        else:
+            query = f"SELECT * FROM {table_name} WHERE {column_name} LIKE ?"
+
+        cursor.execute(query, ('%' + search_value + '%',) if not exact_match else (search_value,))
         results = cursor.fetchall()
 
         # If no results are found
@@ -72,7 +76,8 @@ def execute_dynamic_query(conn, table_name, column_name, search_value):
     except Exception as e:
         print(f"Unexpected error: {e}")
         return None, "An unexpected error occurred."
-    finally:
-        cursor.close()  # Ensure the cursor is closed after usage
-        conn.close()  # Optionally close the connection if no longer needed
+
+
+
+
 
