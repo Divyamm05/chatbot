@@ -126,13 +126,14 @@ if prompt := st.chat_input(f"Enter prompt "):
             conversation.extend(st.session_state.messages)  # Add the entire conversation history
 
             # Request response from OpenAI's API using `openai.completions.create()` for version 1.0.0
-            response = openai.chat_completions.create(
+            response = openai.chat.completions.create(
             model=OPENAI_MODEL,
-            messages=conversation,  # This should be a list of message dictionaries, as in the original code
+            messages=conversation,
             max_tokens=MAX_TOKENS
             )
 
-            full_response = response['choices'][0]['message']['content']
+            full_response = response.choices[0].message.content
+            message_placeholder.markdown(full_response)
 
         except Exception as e:
             st.session_state.messages.append({"role": "assistant", "content": f"Error: {str(e)}"})
