@@ -34,7 +34,7 @@ def download_db_from_github():
             with open("database2.db", "wb") as f:
                 f.write(response.content)
             if os.path.exists("database2.db") and os.path.getsize("database2.db") > 0:
-                st.success("Downloaded database from GitHub successfully!")
+                st.success("")
             else:
                 st.error("Downloaded database is empty or invalid.")
         else:
