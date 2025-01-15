@@ -12,7 +12,7 @@ from file_handlers import handle_uploaded_file
 openai.api_key = st.secrets["openai"]["api_key"]
 
 # Set model parameters
-OPENAI_MODEL = "gpt-3.5-turbo"  # Set the model you want to use
+OPENAI_MODEL = "gpt-4"  # Set the model you want to use
 MAX_TOKENS = 2500  # Set the max token limit for the OpenAI API
 
 # GitHub repository URL for the raw .db file
