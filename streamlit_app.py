@@ -63,3 +63,4 @@ st.info("""
 - Verify file permissions for the database.
 - Ensure the correct database format (SQLite).
 """)
+
