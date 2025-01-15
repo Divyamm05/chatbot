@@ -1,13 +1,17 @@
 import sqlite3
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Function to connect to the SQLite database
 def connect_to_db(db_path):
     try:
         conn = sqlite3.connect(db_path)  # Connect to the SQLite database
-        print("Connected to SQLite database")
+        logging.info("Connected to SQLite database successfully.")
         return conn
     except sqlite3.Error as e:
-        print(f"Error connecting to database: {e}")
+        logging.error(f"Error connecting to database: {e}")
         return None
 
 # Function to fetch users from the database
@@ -16,9 +20,10 @@ def fetch_users(conn):
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM user_details")  # Query to fetch all users
         users = cursor.fetchall()  # Fetch all records
+        logging.info(f"Fetched {len(users)} user(s) from the database.")
         return users
     except sqlite3.Error as e:
-        print(f"Error fetching users: {e}")
+        logging.error(f"Error fetching users: {e}")
         return []
 
 # Function to format user data as a dictionary for easy access
@@ -37,15 +42,18 @@ def main(db_path):
     conn = connect_to_db(db_path)
 
     if conn:
-        users = fetch_users(conn)
-        if users:
-            formatted_users = format_user_data(users)
-            print("Fetched and formatted users:", formatted_users)  # Debug print
-        else:
-            print("No users found or error fetching data.")
-        conn.close()  # Close the database connection
+        try:
+            users = fetch_users(conn)
+            if users:
+                formatted_users = format_user_data(users)
+                logging.info(f"Fetched and formatted users: {formatted_users}")
+            else:
+                logging.warning("No users found or error fetching data.")
+        finally:
+            conn.close()  # Ensure connection is closed
+            logging.info("Database connection closed.")
     else:
-        print("Failed to connect to the database.")
+        logging.error("Failed to connect to the database.")
 
 if __name__ == "__main__":
     # Dynamically set the database path or pass it directly
