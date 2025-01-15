@@ -1,5 +1,6 @@
 import openai
 import streamlit as st
+import toml
 from utils import load_chat_history, save_chat_history
 from visualizations import generate_pie_chart, generate_bar_chart
 from file_handlers import handle_uploaded_file
@@ -7,6 +8,10 @@ from database import connect_to_db, execute_dynamic_query
 
 # Load API key from Streamlit's secrets
 openai.api_key = st.secrets["openai"]["api_key"]
+
+# Load database path from the .toml file
+config = toml.load("config.toml")
+db_path = config["database"]["path"]
 
 # Set model parameters
 OPENAI_MODEL = "gpt-3.5-turbo"
@@ -41,9 +46,6 @@ with st.sidebar:
 
     # File uploader for attachments (moved below the chart selection and slider)
     uploaded_file = st.file_uploader("Upload an attachment (optional)", type=["txt", "csv", "xlsx", "pdf", "jpg", "png", "docx"])
-
-    # Text input for database path
-    db_path = st.text_input("Enter database path", value='/home/vr-dt-100/Desktop/chinook.db')
 
 # Handle file uploads and visualization-related tasks
 data, columns = handle_uploaded_file(uploaded_file)
