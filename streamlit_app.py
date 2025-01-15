@@ -122,12 +122,7 @@ if prompt := st.chat_input(f"Enter prompt "):
         try:
             # Construct the conversation history as a list of messages
             system_message = {"role": "system", "content": "You are a helpful assistant."}
-            conversation = [system_message, {"role": "user", "content": prompt}]
-
-            # If an Excel, CSV, or any other file is uploaded, include it in the conversation
-            if uploaded_file:
-                conversation.append({"role": "user", "content": prompt + "\n\n" + str(data)})
-
+            conversation = [{"role": "user", "content": prompt}]
             conversation.extend(st.session_state.messages)  # Add the entire conversation history
 
             # Request response from OpenAI's API using `openai.completions.create()` for version 1.0.0
@@ -137,7 +132,7 @@ if prompt := st.chat_input(f"Enter prompt "):
                 max_tokens=MAX_TOKENS
             )
 
-            full_response = response.choices[0].message['content']
+            full_response = response['choices'][0]['message']['content']
             message_placeholder.markdown(full_response)
 
         except Exception as e:
