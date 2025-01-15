@@ -54,38 +54,21 @@ def connect_to_db(db_path):
         st.error(f"Database connection error: {e}")
         return None
 
-# Function to get the table names from the database
-def get_table_names(conn):
-    try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-        tables = cursor.fetchall()
-        return [table[0] for table in tables]
-    except sqlite3.DatabaseError as e:
-        st.error(f"Error querying the database: {e}")
-        return []
-
-# Function to get the column names from a table
+# Function to get column names from a given table
 def get_column_names(conn, table_name):
     try:
         cursor = conn.cursor()
         cursor.execute(f"PRAGMA table_info({table_name});")
         columns = cursor.fetchall()
-        return [column[1] for column in columns]  # Return only column names
+        return [column[1] for column in columns]
     except sqlite3.DatabaseError as e:
-        st.error(f"Error querying column names for table '{table_name}': {e}")
+        st.error(f"Error fetching column names: {e}")
         return []
 
 # Initialize database connection
 conn = connect_to_db("database2.db")
 if conn is None:
     st.error("Failed to connect to the database. Please check the .db file.")
-else:
-    table_names = get_table_names(conn)
-    if not table_names:
-        st.error("No tables found in the database.")
-    else:
-        selected_table = st.selectbox("Select a table to query", table_names)
 
 # Sidebar for chart selection and file attachment
 with st.sidebar:
@@ -167,23 +150,21 @@ if chart_type == "Pie Chart" and pie_column is not None:
         else:
             st.error("Please select a valid column for the Pie Chart")
 
-# Database interaction: Connect and execute queries on selected table
-if conn and selected_table:
-    column_names = get_column_names(conn, selected_table)
-    if column_names:
-        selected_column = st.selectbox("Select a column to query", column_names)
-        search_value = st.text_input("Enter value to search for", "")
+# Database interaction: Connect and execute queries directly
+if conn:
+    table_name = "sqlite_master"  # Default to the sqlite_master table for column names
+    column_names = get_column_names(conn, table_name)  # Get the column names directly from the master table
+    selected_column = st.selectbox("Select a column to query", column_names)
+    search_value = st.text_input("Enter value to search for", "")
 
-        if search_value:
-            result, error = execute_dynamic_query(conn, selected_table, selected_column, search_value)
-            if error:
-                st.error(error)
-            else:
-                st.write(result)
-    else:
-        st.error("No columns found in the selected table.")
+    if search_value:
+        result, error = execute_dynamic_query(conn, table_name, selected_column, search_value)
+        if error:
+            st.error(error)
+        else:
+            st.write(result)
 else:
-    st.error("Could not connect to the database or table selection failed.")
+    st.error("Could not connect to the database.")
 
 # Display chat messages
 for message in st.session_state.messages:
