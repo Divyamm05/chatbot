@@ -1,7 +1,7 @@
 import sqlite3
 import os
 
-def connect_to_db(db_path='/home/vr-dt-100/Desktop/chinook.db'):
+def connect_to_db(db_path):
     """
     Connect to the SQLite database at the given path. Handles errors gracefully and checks if the file exists.
     """
@@ -27,7 +27,7 @@ def connect_to_db(db_path='/home/vr-dt-100/Desktop/chinook.db'):
 
 def get_table_columns(conn):
     """
-    Fetch all table names and their column names in the database.
+    Fetch all table names and their column names in the database dynamically.
     """
     try:
         cursor = conn.cursor()
@@ -45,3 +45,25 @@ def get_table_columns(conn):
     except sqlite3.Error as e:
         print(f"SQLite error: {e}")
         return {}
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return {}
+
+
+def execute_dynamic_query(conn, table_name, column_name, search_value):
+    """
+    Executes a dynamic SQL query to search for a value in a specified column of a specified table.
+    """
+    try:
+        cursor = conn.cursor()
+        query = f"SELECT * FROM {table_name} WHERE {column_name} LIKE ?"
+        cursor.execute(query, ('%' + search_value + '%',))
+        results = cursor.fetchall()
+        return results
+    except sqlite3.Error as e:
+        print(f"SQLite error: {e}")
+        return []
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return []
+

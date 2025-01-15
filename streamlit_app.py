@@ -42,6 +42,9 @@ with st.sidebar:
     # File uploader for attachments (moved below the chart selection and slider)
     uploaded_file = st.file_uploader("Upload an attachment (optional)", type=["txt", "csv", "xlsx", "pdf", "jpg", "png", "docx"])
 
+    # Text input for database path
+    db_path = st.text_input("Enter database path", value='/home/vr-dt-100/Desktop/chinook.db')
+
 # Handle file uploads and visualization-related tasks
 data, columns = handle_uploaded_file(uploaded_file)
 
@@ -120,17 +123,21 @@ if prompt := st.chat_input(f"Enter prompt "):
             system_message = {"role": "system", "content": "You are a helpful assistant."}
             conversation = [system_message, {"role": "user", "content": prompt}]
 
-            # Connect to the database and check for queries related to user data
-            conn = connect_to_db()  # Connect to the database
+            # Connect to the database dynamically using the input path
+            conn = connect_to_db(db_path)  # Use the database path provided by the user
 
             # If the prompt contains a request for a user ID (e.g., "Give me user id of john")
             if "user id of" in prompt.lower() and conn:
                 user_name = prompt.split("user id of")[-1].strip()  # Extract the user name from the prompt
                 tables_columns = get_table_columns(conn)
                 user_id = None
-                if 'users' in tables_columns:
+                table = st.selectbox("Select table", options=list(tables_columns.keys()))  # Dynamic table selection
+                columns_in_table = tables_columns.get(table, [])
+                column = st.selectbox("Select column", options=columns_in_table)  # Dynamic column selection
+
+                if 'users' in table and user_name:
                     cursor = conn.cursor()
-                    cursor.execute("SELECT * FROM users")  # Modify as per your table structure
+                    cursor.execute(f"SELECT * FROM {table} WHERE {column} LIKE ?", ('%' + user_name + '%',))  # Dynamic query
                     users = cursor.fetchall()
                     for user in users:
                         if user_name.lower() in user[1].lower():  # Assuming the name is in the second column
