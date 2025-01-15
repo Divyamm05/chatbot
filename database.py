@@ -27,26 +27,25 @@ def connect_to_db(db_path='/home/vr-dt-100/Desktop/chinook.db'):
 
 def execute_sql_query(conn, query):
     """
-    Execute a given SQL query on the connected database.
+    Executes a raw SQL query on the database.
 
     Args:
-        conn (sqlite3.Connection): SQLite connection object.
-        query (str): The SQL query to be executed.
+        conn (sqlite3.Connection): The database connection object.
+        query (str): The SQL query string to execute.
 
     Returns:
-        result (list): Result of the query execution (if any) or None if the query does not return results.
+        result (list): The result of the SQL query.
     """
     try:
         cursor = conn.cursor()
         cursor.execute(query)
         
-        # Commit changes for non-SELECT queries (INSERT, UPDATE, DELETE)
-        if query.strip().lower().startswith(('insert', 'update', 'delete')):
-            conn.commit()
-            return None  # No result for these queries
-
-        # Fetch the results for SELECT queries
-        result = cursor.fetchall()
+        if query.lower().startswith('select'):
+            result = cursor.fetchall()  # Fetch all rows of a query result
+        else:
+            conn.commit()  # Commit changes for non-SELECT queries
+            result = None  # Return None for non-SELECT queries
+            
         return result
     except sqlite3.Error as e:
         print(f"SQLite error: {e}")
@@ -55,20 +54,19 @@ def execute_sql_query(conn, query):
 
 def fetch_columns(conn, table_name):
     """
-    Fetch column names from a given table.
+    Fetches column names from a given table.
 
     Args:
-        conn (sqlite3.Connection): SQLite connection object.
-        table_name (str): The name of the table from which to fetch column names.
+        conn (sqlite3.Connection): The database connection object.
+        table_name (str): The table name to fetch columns from.
 
     Returns:
-        columns (list): A list of column names from the table.
+        columns (list): List of column names from the specified table.
     """
     try:
         cursor = conn.cursor()
         cursor.execute(f"PRAGMA table_info({table_name})")
-        columns_info = cursor.fetchall()
-        columns = [col[1] for col in columns_info]  # Extract column names from the result
+        columns = [column[1] for column in cursor.fetchall()]  # Get column names
         return columns
     except sqlite3.Error as e:
         print(f"SQLite error: {e}")
@@ -77,27 +75,20 @@ def fetch_columns(conn, table_name):
 
 def fetch_data_by_user_id(conn, user_id):
     """
-    Fetch data for a user by their user ID.
+    Fetches data from the database based on user_id.
 
     Args:
-        conn (sqlite3.Connection): SQLite connection object.
-        user_id (int): The user ID to look up.
+        conn (sqlite3.Connection): The database connection object.
+        user_id (int): The user ID to search for.
 
     Returns:
-        user_data (dict): Data of the user with the specified ID.
+        user_data (tuple): The user data if found, else None.
     """
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
-        user_data = cursor.fetchone()
-        
-        if user_data:
-            # Return user data as a dictionary (using column names if available)
-            columns = [description[0] for description in cursor.description]
-            user_data_dict = dict(zip(columns, user_data))
-            return user_data_dict
-        else:
-            return None
+        cursor.execute(f"SELECT * FROM users WHERE user_id = ?", (user_id,))
+        user_data = cursor.fetchone()  # Fetch a single row based on the user ID
+        return user_data
     except sqlite3.Error as e:
         print(f"SQLite error: {e}")
         return None

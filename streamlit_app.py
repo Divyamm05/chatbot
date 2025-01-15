@@ -5,7 +5,7 @@ import sqlite3
 from utils import load_chat_history, save_chat_history
 from visualizations import generate_pie_chart, generate_bar_chart  # Import visualization functions
 from file_handlers import handle_uploaded_file
-from database import connect_to_db, execute_sql_query, fetch_columns, fetch_data_by_user_id  # Import the necessary database functions
+from database import connect_to_db, execute_sql_query, fetch_columns, fetch_data_by_user_id  # Import necessary database functions
 
 # Load API key from Streamlit's secrets
 openai.api_key = st.secrets["openai"]["api_key"]
@@ -141,7 +141,10 @@ if prompt := st.chat_input(f"Enter SQL query or a message: "):
             elif "user_id =" in prompt.lower():
                 user_id = int(prompt.split("user_id =")[-1].strip())
                 user_data = fetch_data_by_user_id(conn, user_id)
-                message_placeholder.markdown(f"User Data for ID {user_id}: {user_data}")
+                if user_data:
+                    message_placeholder.markdown(f"User Data for ID {user_id}: {user_data}")
+                else:
+                    message_placeholder.markdown(f"No user found with ID {user_id}.")
             
             else:
                 # If it's not a SQL query, use OpenAI API for regular queries
