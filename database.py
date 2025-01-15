@@ -25,21 +25,52 @@ def connect_to_db(db_path='/home/vr-dt-100/Desktop/chinook.db'):
     return None
 
 
-def fetch_users(conn):
+def fetch_tables_and_columns(conn):
     """
-    Fetch user information from the database.
+    Fetch all tables and their columns from the database.
 
     Args:
         conn (sqlite3.Connection): SQLite connection object.
 
     Returns:
-        users (list): A list of users fetched from the database or an empty list if there's an error.
+        tables (dict): A dictionary where keys are table names and values are lists of column names.
     """
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users")  # Modify as per your table structure
-        users = cursor.fetchall()
-        return users
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = cursor.fetchall()
+
+        tables_columns = {}
+        for table in tables:
+            table_name = table[0]
+            cursor.execute(f"PRAGMA table_info({table_name})")  # Fetch column info
+            columns = [column[1] for column in cursor.fetchall()]
+            tables_columns[table_name] = columns
+
+        return tables_columns
+    except sqlite3.Error as e:
+        print(f"SQLite error: {e}")
+    return {}
+
+
+def fetch_data_for_query(conn, table, column, value):
+    """
+    Fetch data from a specific table and column based on user input.
+
+    Args:
+        conn (sqlite3.Connection): SQLite connection object.
+        table (str): The table name.
+        column (str): The column name.
+        value (str): The value to search for in the column.
+
+    Returns:
+        result (list): A list of rows matching the query.
+    """
+    try:
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT * FROM {table} WHERE {column} LIKE ?", (f"%{value}%",))
+        result = cursor.fetchall()
+        return result
     except sqlite3.Error as e:
         print(f"SQLite error: {e}")
     return []

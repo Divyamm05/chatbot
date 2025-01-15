@@ -6,7 +6,7 @@ import os
 from utils import load_chat_history, save_chat_history
 from visualizations import generate_pie_chart, generate_bar_chart, preview_uploaded_file
 from file_handlers import handle_uploaded_file
-from database import connect_to_db, fetch_users  # Importing the database functions
+from database import connect_to_db, fetch_tables_and_columns, fetch_data_for_query  # New database functions
 
 # Load API key from Streamlit's secrets
 openai.api_key = st.secrets["openai"]["api_key"]
@@ -48,7 +48,30 @@ with st.sidebar:
 # Handle file uploads and visualization-related tasks
 data, columns = handle_uploaded_file(uploaded_file)
 
-# Initialize data to None by default
+# Database connection and schema inspection
+conn = connect_to_db()  # Connect to the database
+if conn:
+    tables_columns = fetch_tables_and_columns(conn)  # Get available tables and columns
+
+# Display available tables in the sidebar
+if tables_columns:
+    table_names = list(tables_columns.keys())
+    table_name = st.selectbox("Select a table to query", options=["Select a table"] + table_names)
+
+    if table_name != "Select a table":
+        column_name = st.selectbox(f"Select a column in {table_name}", options=tables_columns[table_name])
+        search_value = st.text_input(f"Search for a value in {column_name}")
+        
+        if st.button("Search"):
+            results = fetch_data_for_query(conn, table_name, column_name, search_value)
+            if results:
+                st.write(f"Found results in {table_name}:")
+                for row in results:
+                    st.write(row)
+            else:
+                st.write(f"No results found for '{search_value}' in {table_name}.")
+
+# Chart generation functionality (Bar Chart and Pie Chart)
 x_column = None
 y_column = None
 pie_column = None  # Variable to store selected Pie Chart column
@@ -122,38 +145,17 @@ if prompt := st.chat_input(f"Enter prompt "):
             # Construct the conversation history as a list of messages
             system_message = {"role": "system", "content": "You are a helpful assistant."}
             conversation = [system_message, {"role": "user", "content": prompt}]
+            conversation.extend(st.session_state.messages)  # Add the entire conversation history
 
-            # Connect to the database and check for queries related to user data
-            conn = connect_to_db()  # Connect to the database
+            # Request response from OpenAI's API
+            response = openai.chat.completions.create(
+                model=OPENAI_MODEL,
+                messages=conversation,
+                max_tokens=MAX_TOKENS
+            )
 
-            # If the prompt contains a request for a user ID (e.g., "Give me user id of john")
-            if "user id of" in prompt.lower():
-                user_name = prompt.split("user id of")[-1].strip()  # Extract the user name from the prompt
-                users = fetch_users(conn)
-                user_id = None
-                for user in users:
-                    if user_name.lower() in user[1].lower():  # Assuming the name is in the second column
-                        user_id = user[0]  # Assuming the ID is in the first column
-                        break
-
-                if user_id:
-                    message_placeholder.markdown(f"The user ID of {user_name} is {user_id}.")
-                else:
-                    message_placeholder.markdown(f"User {user_name} not found in the database.")
-
-            # Request response from OpenAI's API using openai.ChatCompletion.create()
-            else:
-                conversation.extend(st.session_state.messages)  # Add the entire conversation history
-
-                # Request response from OpenAI's API
-                response = openai.chat.completions.create(
-                    model=OPENAI_MODEL,
-                    messages=conversation,
-                    max_tokens=MAX_TOKENS
-                )
-
-                full_response = response.choices[0].message.content
-                message_placeholder.markdown(full_response)
+            full_response = response.choices[0].message.content
+            message_placeholder.markdown(full_response)
 
         except Exception as e:
             st.session_state.messages.append({"role": "assistant", "content": f"Error: {str(e)}"})
