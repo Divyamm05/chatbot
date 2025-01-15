@@ -3,7 +3,7 @@ import openai
 from utils import load_chat_history, save_chat_history
 from visualizations import generate_pie_chart, generate_bar_chart
 from file_handlers import handle_uploaded_file
-from database import connect_to_db, get_table_columns  # Import database functions
+from database import connect_to_db, execute_dynamic_query  # Importing updated database functions
 
 # Load API key from Streamlit's secrets
 openai.api_key = st.secrets["openai"]["api_key"]
@@ -119,8 +119,8 @@ if prompt := st.chat_input(f"Enter prompt "):
             st.spinner("Thinking...")
 
         try:
-            # Construct the conversation history as a list of messages
-            system_message = {"role": "system", "content": "You are a helpful assistant."}
+            # Construct the conversation history as a list of messages with improved prompt engineering
+            system_message = {"role": "system", "content": "You are a helpful assistant. You have access to a database and can assist with queries regarding album information, user data, and more."}
             conversation = [system_message, {"role": "user", "content": prompt}]
 
             # Connect to the database dynamically using the input path
@@ -145,20 +145,33 @@ if prompt := st.chat_input(f"Enter prompt "):
                         message_placeholder.markdown("It seems like you're mentioning different IDs. Could you please clarify if the album ID for 'Balls to the Wall' is 2 or 3?")
                     else:
                         message_placeholder.markdown(f"The album ID for 'Balls to the Wall' is {album_id}.")
-
-            # Request response from OpenAI's API using openai.ChatCompletion.create()
             else:
+                # For general queries, handle dynamic database interaction
                 conversation.extend(st.session_state.messages)  # Add the entire conversation history
 
-                # Request response from OpenAI's API
-                response = openai.chat.completions.create(
-                    model=OPENAI_MODEL,
-                    messages=conversation,
-                    max_tokens=MAX_TOKENS
-                )
+                # Query the database based on user input
+                table_name, column_name = 'albums', 'name'  # Example table and column, adjust as needed
+                search_value = prompt
 
-                full_response = response.choices[0].message.content
-                message_placeholder.markdown(full_response)
+                # Execute dynamic query
+                result, clarification_message = execute_dynamic_query(conn, table_name, column_name, search_value)
+
+                if result:
+                    message_placeholder.markdown(f"Found result: {result}")
+                elif clarification_message:
+                    message_placeholder.markdown(clarification_message)
+                else:
+                    message_placeholder.markdown(f"No results found for '{search_value}'.")
+
+            # Request response from OpenAI's API using openai.ChatCompletion.create()
+            response = openai.chat_completions.create(
+                model=OPENAI_MODEL,
+                messages=conversation,
+                max_tokens=MAX_TOKENS
+            )
+
+            full_response = response.choices[0].message.content
+            message_placeholder.markdown(full_response)
 
         except Exception as e:
             st.session_state.messages.append({"role": "assistant", "content": f"Error: {str(e)}"})
