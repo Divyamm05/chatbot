@@ -1,12 +1,9 @@
-import pandas as pd
 import streamlit as st
 import openai
-import json
-import os
 from utils import load_chat_history, save_chat_history
-from visualizations import generate_pie_chart, generate_bar_chart, preview_uploaded_file
+from visualizations import generate_pie_chart, generate_bar_chart
 from file_handlers import handle_uploaded_file
-from database import connect_to_db, fetch_tables_and_columns  # Updated import for dynamic tables/columns
+from database import connect_to_db, get_table_columns  # Import database functions
 
 # Load API key from Streamlit's secrets
 openai.api_key = st.secrets["openai"]["api_key"]
@@ -123,46 +120,41 @@ if prompt := st.chat_input(f"Enter prompt "):
             system_message = {"role": "system", "content": "You are a helpful assistant."}
             conversation = [system_message, {"role": "user", "content": prompt}]
 
-            # Connect to the database and check for tables/columns dynamically
+            # Connect to the database and check for queries related to user data
             conn = connect_to_db()  # Connect to the database
 
-            if conn:
-                # Fetch tables and columns from the database
-                tables_columns = fetch_tables_and_columns(conn)
-                if tables_columns:
-                    # If tables and columns are found, display them for user to choose
-                    table_name = st.selectbox("Select a table", options=[table[0] for table in tables_columns])
-                    selected_columns = next(table[1] for table in tables_columns if table[0] == table_name)
-                    column_name = st.selectbox(f"Select a column from {table_name}", options=selected_columns)
+            # If the prompt contains a request for a user ID (e.g., "Give me user id of john")
+            if "user id of" in prompt.lower() and conn:
+                user_name = prompt.split("user id of")[-1].strip()  # Extract the user name from the prompt
+                tables_columns = get_table_columns(conn)
+                user_id = None
+                if 'users' in tables_columns:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT * FROM users")  # Modify as per your table structure
+                    users = cursor.fetchall()
+                    for user in users:
+                        if user_name.lower() in user[1].lower():  # Assuming the name is in the second column
+                            user_id = user[0]  # Assuming the ID is in the first column
+                            break
 
-                    if column_name:
-                        query = f"SELECT {column_name} FROM {table_name} LIMIT 5"  # Sample query to fetch data
-                        cursor = conn.cursor()
-                        cursor.execute(query)
-                        rows = cursor.fetchall()
-
-                        # Show the fetched data as a preview
-                        if rows:
-                            preview_data = pd.DataFrame(rows, columns=[column_name])
-                            st.write(preview_data)
-                        else:
-                            st.write("No data found.")
+                if user_id:
+                    message_placeholder.markdown(f"The user ID of {user_name} is {user_id}.")
                 else:
-                    st.error("No tables found in the database.")
+                    message_placeholder.markdown(f"User {user_name} not found in the database.")
+
+            # Request response from OpenAI's API using openai.ChatCompletion.create()
             else:
-                st.error("Could not connect to the database. Please check your database configuration.")
+                conversation.extend(st.session_state.messages)  # Add the entire conversation history
 
-            # Request response from OpenAI's API
-            conversation.extend(st.session_state.messages)  # Add the entire conversation history
+                # Request response from OpenAI's API
+                response = openai.chat.completions.create(
+                    model=OPENAI_MODEL,
+                    messages=conversation,
+                    max_tokens=MAX_TOKENS
+                )
 
-            response = openai.chat.completions.create(
-                model=OPENAI_MODEL,
-                messages=conversation,
-                max_tokens=MAX_TOKENS
-            )
-
-            full_response = response.choices[0].message.content
-            message_placeholder.markdown(full_response)
+                full_response = response.choices[0].message.content
+                message_placeholder.markdown(full_response)
 
         except Exception as e:
             st.session_state.messages.append({"role": "assistant", "content": f"Error: {str(e)}"})
