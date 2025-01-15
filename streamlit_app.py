@@ -102,6 +102,21 @@ if chart_type == "Pie Chart" and pie_column is not None:
         else:
             st.error("Please select a valid column for the Pie Chart")
 
+# Database interaction: Connect and execute queries
+if db_path:
+    conn = connect_to_db(db_path)
+    if conn:
+        table_name = 'your_table'  # Example table name
+        column_name = 'your_column'  # Example column name
+        search_value = 'search_term'  # Example search value
+        result, error = execute_dynamic_query(conn, table_name, column_name, search_value)
+        if error:
+            st.error(error)
+        else:
+            st.write(result)
+    else:
+        st.error("Could not connect to the database. Please check the database path.")
+
 # Display chat messages
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
@@ -125,7 +140,7 @@ if prompt := st.chat_input(f"Enter prompt "):
             conversation = [{"role": "user", "content": prompt}]
             conversation.extend(st.session_state.messages)  # Add the entire conversation history
 
-            # Request response from OpenAI's API using `openai.completions.create()` for version 1.0.0
+            # Request response from OpenAI's API using `openai.chat.completions.create()` for version 1.0.0
             response = openai.chat.completions.create(
             model=OPENAI_MODEL,
             messages=conversation,
