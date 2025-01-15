@@ -141,23 +141,21 @@ if prompt := st.chat_input(f"Enter prompt "):
                 else:
                     message_placeholder.markdown(f"User {user_name} not found in the database.")
 
-            # Request response from OpenAI's API using `openai.ChatCompletion.create()`
-            else:
-                conversation.extend(st.session_state.messages)  # Add the entire conversation history
-
-                # Request response from OpenAI's API
-                response = openai.chat.completions.create(
-                    model=OPENAI_MODEL,
-                    messages=conversation,
-                    max_tokens=MAX_TOKENS
-                )
-
-                full_response = response.choices[0].message.content
-                message_placeholder.markdown(full_response)
-
+            # Request response from OpenAI's API using the conversation history
+            response = openai.ChatCompletion.create(
+                model=OPENAI_MODEL,
+                messages=conversation,
+                max_tokens=MAX_TOKENS
+            )
+            
+            # Display response and save chat history
+            response_message = response['choices'][0]['message']['content']
+            st.markdown(response_message)
+            st.session_state.messages.append({"role": "assistant", "content": response_message})
+            save_chat_history(st.session_state.messages)  # Save to history after response
         except Exception as e:
-            st.session_state.messages.append({"role": "assistant", "content": f"Error: {str(e)}"})
-            message_placeholder.markdown(f"Error: {str(e)}")
+            message_placeholder.markdown(f"An error occurred: {str(e)}")
+
 
 # Save the updated chat history to the file
 save_chat_history(st.session_state.messages)
