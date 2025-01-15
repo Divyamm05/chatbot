@@ -56,12 +56,24 @@ def connect_to_db(db_path):
 
 # Function to get column names from a given table
 def get_column_names(conn, table_name):
+    """
+    This function returns the column names for the specified table in the SQLite database.
+
+    Parameters:
+    - conn: SQLite database connection
+    - table_name: The name of the table for which to fetch the column names
+
+    Returns:
+    - List of column names
+    """
     try:
+        query = f"PRAGMA table_info({table_name});"
         cursor = conn.cursor()
-        cursor.execute(f"PRAGMA table_info({table_name});")
+        cursor.execute(query)
         columns = cursor.fetchall()
-        return [column[1] for column in columns]
-    except sqlite3.DatabaseError as e:
+        column_names = [column[1] for column in columns]
+        return column_names
+    except sqlite3.Error as e:
         st.error(f"Error fetching column names: {e}")
         return []
 
