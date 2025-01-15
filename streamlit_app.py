@@ -126,7 +126,7 @@ if prompt := st.chat_input(f"Enter prompt "):
             conversation.extend(st.session_state.messages)  # Add the entire conversation history
 
             # Request response from OpenAI's API using `openai.completions.create()` for version 1.0.0
-            response = openai.completions.create(
+            response = openai.ChatCompletion.create(
                 model=OPENAI_MODEL,
                 messages=conversation,
                 max_tokens=MAX_TOKENS
