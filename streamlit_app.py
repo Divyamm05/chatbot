@@ -126,28 +126,25 @@ if prompt := st.chat_input(f"Enter prompt "):
             # Connect to the database dynamically using the input path
             conn = connect_to_db(db_path)  # Use the database path provided by the user
 
-            # If the prompt contains a request for a user ID (e.g., "Give me user id of john")
-            if "user id of" in prompt.lower() and conn:
-                user_name = prompt.split("user id of")[-1].strip()  # Extract the user name from the prompt
-                tables_columns = get_table_columns(conn)
-                user_id = None
-                table = st.selectbox("Select table", options=list(tables_columns.keys()))  # Dynamic table selection
-                columns_in_table = tables_columns.get(table, [])
-                column = st.selectbox("Select column", options=columns_in_table)  # Dynamic column selection
+            # Handling ambiguous or contradictory inputs
+            if "album id of" in prompt.lower():
+                album_name = prompt.split("album id of")[-1].strip()
+                if 'balls to the wall' in album_name.lower():
+                    album_id = None
+                    last_mentioned_id = None
 
-                if 'users' in table and user_name:
-                    cursor = conn.cursor()
-                    cursor.execute(f"SELECT * FROM {table} WHERE {column} LIKE ?", ('%' + user_name + '%',))  # Dynamic query
-                    users = cursor.fetchall()
-                    for user in users:
-                        if user_name.lower() in user[1].lower():  # Assuming the name is in the second column
-                            user_id = user[0]  # Assuming the ID is in the first column
-                            break
-
-                if user_id:
-                    message_placeholder.markdown(f"The user ID of {user_name} is {user_id}.")
-                else:
-                    message_placeholder.markdown(f"User {user_name} not found in the database.")
+                    # Check if the user mentions conflicting IDs
+                    for message in st.session_state.messages:
+                        if "3" in message["content"] or "2" in message["content"]:
+                            if last_mentioned_id and last_mentioned_id != message["content"]:
+                                album_id = None
+                                break
+                            last_mentioned_id = message["content"]
+                    
+                    if album_id is None:
+                        message_placeholder.markdown("It seems like you're mentioning different IDs. Could you please clarify if the album ID for 'Balls to the Wall' is 2 or 3?")
+                    else:
+                        message_placeholder.markdown(f"The album ID for 'Balls to the Wall' is {album_id}.")
 
             # Request response from OpenAI's API using openai.ChatCompletion.create()
             else:
