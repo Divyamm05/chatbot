@@ -1,113 +1,75 @@
-import pandas as pd
-import streamlit as st
 import openai
-import json
+import streamlit as st
+import sqlite3
 import os
-from utils import load_chat_history, save_chat_history
-from visualizations import generate_pie_chart, generate_bar_chart, preview_uploaded_file
-from file_handlers import handle_uploaded_file
-from database import connect_to_db, fetch_users  # Importing the database functions
+from datetime import datetime
 
-# Load API key from Streamlit's secrets
-openai.api_key = st.secrets["openai"]["api_key"]
+# Set OpenAI API key
+openai.api_key = 'your-openai-api-key-here'
 
-# Set model parameters
-OPENAI_MODEL = "gpt-3.5-turbo"
-MAX_TOKENS = 2500
+# Connect to SQLite database
+def connect_to_db():
+    conn = sqlite3.connect("chat_history.db")
+    return conn
 
-# File to store chat history
-CHAT_HISTORY_FILE = 'chat_history.json'
+# Create the table if it doesn't exist
+def create_table():
+    conn = connect_to_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS chat_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            role TEXT,
+            content TEXT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    conn.commit()
+    conn.close()
 
-# Load the previous chat history if available
-if "messages" not in st.session_state:
-    st.session_state.messages = load_chat_history()
+# Fetch all users from the database
+def fetch_users(conn):
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users")
+    return cursor.fetchall()
 
-# Sidebar for chart selection and file attachment
-with st.sidebar:
-    col1, col2 = st.columns([3, 1])  # Create two columns in the sidebar for layout
-    
-    # Sidebar: Add a dropdown menu for selecting chart type
-    st.title('🤖💬 CHATBOT')
-    
-    with col1:
-        # Sidebar: Add the "Start New Chat" button next to the title
-        if st.button('Start New Chat'):
-            st.session_state.messages = []  # Clears the chat history
-            save_chat_history(st.session_state.messages)  # Save the empty history
-            st.rerun()  # Rerun the app to refresh the interface
+# Save chat history to database
+def save_chat_history(messages):
+    conn = connect_to_db()
+    cursor = conn.cursor()
+    for message in messages:
+        cursor.execute("INSERT INTO chat_history (role, content) VALUES (?, ?)",
+                       (message["role"], message["content"]))
+    conn.commit()
+    conn.close()
 
-    # Sidebar: Add a dropdown menu for selecting chart type
-    chart_type = st.selectbox(
-        "Select a chart type for visualization",
-        ("Select a chart", "Pie Chart", "Bar Chart")
+# Get OpenAI response (using the new API format)
+def get_openai_response(conversation):
+    response = openai.completions.create(
+        model="gpt-3.5-turbo",  # Specify the model
+        messages=conversation,
+        max_tokens=2500  # Adjust token limit as needed
     )
+    return response['choices'][0]['message']['content']
 
-    # File uploader for attachments (moved below the chart selection and slider)
-    uploaded_file = st.file_uploader("Upload an attachment (optional)", type=["txt", "csv", "xlsx", "pdf", "jpg", "png", "docx"])
+# Create table if not already created
+create_table()
 
-# Handle file uploads and visualization-related tasks
-data, columns = handle_uploaded_file(uploaded_file)
-
-# Initialize data to None by default
-x_column = None
-y_column = None
-pie_column = None  # Variable to store selected Pie Chart column
-if len(columns) > 0:
-    # Pie chart and bar chart options for selecting columns
-    if chart_type == "Bar Chart":
-        x_column_index = st.selectbox("Select X-axis column", options=columns)
-        x_column = data[x_column_index] if x_column_index else None
-
-        y_column_index = st.selectbox("Select Y-axis column", options=columns)
-        y_column = data[y_column_index] if y_column_index else None
-
-    elif chart_type == "Pie Chart":
-        # Add the column selection for Pie Chart using dropdown
-        pie_column_index = st.selectbox("Select column for Pie Chart", options=columns)
-        pie_column = data[pie_column_index] if pie_column_index else None
-
-# Conditionally display the sliders for range values for both axes
-if chart_type == "Bar Chart" and x_column is not None and y_column is not None:
-    # Single slider for both X and Y axis
-    start_value, end_value = st.slider(
-        "Select range of values to visualize",
-        min_value=0,
-        max_value=len(x_column),  # Set max value to the length of the data
-        value=(0, min(10, len(x_column))),  # Default range (start from 0 to 10 or data length)
-        step=1,
-        help="Select the start and end values for both X and Y axes"
-    )
-
-    if st.button("Generate Bar Chart"):
-        # Pass column names as strings (use .name to get the column name)
-        generate_bar_chart(data, x_column.name, y_column.name, start_value, end_value, start_value, end_value)
-
-# Pie chart dropdown functionality
-if chart_type == "Pie Chart" and pie_column is not None:
-    # Dropdown for Pie Chart column selection
-    start_value, end_value = st.slider(
-        "Select range of data for Pie Chart",
-        min_value=0,
-        max_value=len(data),  # Set max value to the length of the data
-        value=(0, min(10, len(data))),  # Default range (start from 0 to 10 or data length)
-        step=1,
-        help="Select the range of data for the Pie Chart"
-    )
-
-    if st.button("Generate Pie Chart"):
-        # Ensure that pie_column is not empty or None
-        if pie_column is not None and not pie_column.empty:
-            generate_pie_chart(data, pie_column.name, start_value, end_value)
-        else:
-            st.error("Please select a valid column for the Pie Chart")
+# Streamlit chat UI
+if 'messages' not in st.session_state:
+    st.session_state.messages = []
 
 # Display chat messages
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+    if message["role"] == "user":
+        with st.chat_message("user"):
+            st.markdown(message["content"])
+    else:
+        with st.chat_message("assistant"):
+            st.markdown(message["content"])
 
-# User input for the prompt
-if prompt := st.chat_input(f"Enter prompt "):
+# Handle user input
+if prompt := st.chat_input("Enter prompt:"):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -124,7 +86,7 @@ if prompt := st.chat_input(f"Enter prompt "):
             conversation = [system_message, {"role": "user", "content": prompt}]
 
             # Connect to the database and check for queries related to user data
-            conn = connect_to_db()  # Connect to the database
+            conn = connect_to_db()
 
             # If the prompt contains a request for a user ID (e.g., "Give me user id of john")
             if "user id of" in prompt.lower():
@@ -140,21 +102,16 @@ if prompt := st.chat_input(f"Enter prompt "):
                     message_placeholder.markdown(f"The user ID of {user_name} is {user_id}.")
                 else:
                     message_placeholder.markdown(f"User {user_name} not found in the database.")
+            else:
+                # Get response from OpenAI using the new API method
+                response_message = get_openai_response(conversation)
+                st.markdown(response_message)
+                st.session_state.messages.append({"role": "assistant", "content": response_message})
+                save_chat_history(st.session_state.messages)  # Save to history after response
 
-            # Request response from OpenAI's API using the conversation history
-            response = openai.ChatCompletion.create(
-                model=OPENAI_MODEL,
-                messages=conversation,
-                max_tokens=MAX_TOKENS
-            )
-            
-            # Display response and save chat history
-            response_message = response['choices'][0]['message']['content']
-            st.markdown(response_message)
-            st.session_state.messages.append({"role": "assistant", "content": response_message})
-            save_chat_history(st.session_state.messages)  # Save to history after response
         except Exception as e:
             message_placeholder.markdown(f"An error occurred: {str(e)}")
+
 
 
 # Save the updated chat history to the file
