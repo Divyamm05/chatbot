@@ -1,7 +1,7 @@
+import sqlite3
 import openai
+import requests
 import streamlit as st
-import toml
-import requests  # Add this for HTTP requests to download the .db file
 from utils import load_chat_history, save_chat_history
 from visualizations import generate_pie_chart, generate_bar_chart
 from file_handlers import handle_uploaded_file
@@ -11,9 +11,8 @@ from database import connect_to_db, execute_dynamic_query
 openai.api_key = st.secrets["openai"]["api_key"]
 
 # Set model parameters
-OPENAI_MODEL = "gpt-3.5-turbo"  # Set the model you want to use
-MAX_TOKENS = 2500  # Set the max token limit for the OpenAI API
-
+OPENAI_MODEL = "gpt-3.5-turbo"
+MAX_TOKENS = 2500
 
 # GitHub repository URL for the raw .db file
 GITHUB_DB_URL = "https://github.com/Divyamm05/chatbot/blob/main/chinook.db"  # Replace with your actual GitHub URL
@@ -44,6 +43,13 @@ download_db_from_github()
 
 # Initialize database connection
 conn = connect_to_db("database2.db")  # No need for local path anymore
+
+# Function to get table names from the database
+def get_table_names():
+    cursor = conn.cursor()
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+    tables = cursor.fetchall()
+    return [table[0] for table in tables]
 
 # Sidebar for chart selection and file attachment
 with st.sidebar:
@@ -125,55 +131,34 @@ if chart_type == "Pie Chart" and pie_column is not None:
         else:
             st.error("Please select a valid column for the Pie Chart")
 
-# Database interaction: Connect and execute queries
-if conn:
-    table_name = 'your_table'  # Example table name
-    column_name = 'your_column'  # Example column name
-    search_value = 'search_term'  # Example search value
+# Display a dynamic table selection for querying
+st.subheader("Database Query")
+
+# Get table names dynamically from the database
+table_names = get_table_names()
+
+# Allow the user to select a table
+table_name = st.selectbox("Select a table", table_names)
+
+# Fetch column names from the selected table
+cursor = conn.cursor()
+cursor.execute(f"PRAGMA table_info({table_name});")
+columns = cursor.fetchall()
+column_names = [column[1] for column in columns]
+
+# Allow the user to select a column to search
+column_name = st.selectbox("Select a column", column_names)
+
+# Input field for search value
+search_value = st.text_input("Enter search term")
+
+# Execute the dynamic query
+if st.button("Query Data"):
     result, error = execute_dynamic_query(conn, table_name, column_name, search_value)
     if error:
         st.error(error)
     else:
         st.write(result)
-else:
-    st.error("Could not connect to the database. Please check the database path.")
-
-# Display chat messages
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
-# User input for the prompt
-if prompt := st.chat_input(f"Enter prompt "):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
-
-    with st.chat_message("assistant"):
-        message_placeholder = st.empty()
-        with message_placeholder:
-            st.markdown("**Generating response...**")
-            st.spinner("Thinking...")
-
-        try:
-            # Construct the conversation history as a list of messages
-            system_message = {"role": "system", "content": "You are a helpful assistant."}
-            conversation = [{"role": "user", "content": prompt}]
-            conversation.extend(st.session_state.messages)  # Add the entire conversation history
-
-            # Request response from OpenAI's API using `openai.chat.completions.create()` for version 1.0.0
-            response = openai.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=conversation,
-            max_tokens=MAX_TOKENS
-            )
-
-            full_response = response.choices[0].message.content
-            message_placeholder.markdown(full_response)
-
-        except Exception as e:
-            st.session_state.messages.append({"role": "assistant", "content": f"Error: {str(e)}"})
-            message_placeholder.markdown(f"Error: {str(e)}")
 
 # Save the updated chat history to the file
 save_chat_history(st.session_state.messages)
