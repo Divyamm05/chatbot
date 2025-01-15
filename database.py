@@ -1,25 +1,45 @@
 import sqlite3
-import pandas as pd
+import os
 
-DB_PATH = '/home/vr-dt-100/Desktop/database.db'
+def connect_to_db(db_path='/home/vr-dt-100/Desktop/database.db'):
+    """
+    Connect to the SQLite database at the given path. Handles errors gracefully and checks if the file exists.
 
-# Function to connect to the database
-def connect_to_db():
-    conn = sqlite3.connect(DB_PATH)
-    return conn
+    Args:
+        db_path (str): The path to the SQLite database file.
 
-# Function to fetch users from the database
-def fetch_users():
-    conn = connect_to_db()
-    query = "SELECT * FROM users"  # Replace 'users' with your actual table name
-    users_df = pd.read_sql(query, conn)
-    conn.close()
-    return users_df
+    Returns:
+        conn (sqlite3.Connection): SQLite connection object or None if the connection fails.
+    """
+    try:
+        if not os.path.exists(db_path):
+            raise FileNotFoundError(f"Database file not found at: {db_path}")
+        
+        conn = sqlite3.connect(db_path)
+        print("Connected to the database successfully.")
+        return conn
+    except sqlite3.Error as e:
+        print(f"SQLite error: {e}")
+    except FileNotFoundError as fnf_error:
+        print(fnf_error)
+    return None
 
-# Function to fetch user by name (e.g., "John")
-def fetch_user_by_name(name):
-    conn = connect_to_db()
-    query = "SELECT * FROM users WHERE name = ?"  # Replace 'users' with your table name and 'name' with the column name for user names
-    user_data = pd.read_sql(query, conn, params=(name,))
-    conn.close()
-    return user_data
+
+def fetch_users(conn):
+    """
+    Fetch user information from the database.
+
+    Args:
+        conn (sqlite3.Connection): SQLite connection object.
+
+    Returns:
+        users (list): A list of users fetched from the database or an empty list if there's an error.
+    """
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users")  # Modify as per your table structure
+        users = cursor.fetchall()
+        return users
+    except sqlite3.Error as e:
+        print(f"SQLite error: {e}")
+    return []
