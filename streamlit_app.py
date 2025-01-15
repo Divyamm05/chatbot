@@ -1,5 +1,5 @@
-import streamlit as st
 import openai
+import streamlit as st
 from utils import load_chat_history, save_chat_history
 from visualizations import generate_pie_chart, generate_bar_chart
 from file_handlers import handle_uploaded_file
@@ -130,8 +130,8 @@ if prompt := st.chat_input(f"Enter prompt "):
 
             conversation.extend(st.session_state.messages)  # Add the entire conversation history
 
-            # Request response from OpenAI's API using `openai.ChatCompletion.create()`
-            response = openai.ChatCompletion.create(
+            # Request response from OpenAI's API using `openai.completions.create()` for version 1.0.0
+            response = openai.completions.create(
                 model=OPENAI_MODEL,
                 messages=conversation,
                 max_tokens=MAX_TOKENS
