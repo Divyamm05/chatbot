@@ -1,7 +1,7 @@
 import sqlite3
 import os
 
-def connect_to_db(db_path='/home/vr-dt-100/Desktop/chinook.db'):
+def connect_to_db(db_path='/home/vr-dt-100/Desktop/database.db'):
     """
     Connect to the SQLite database at the given path. Handles errors gracefully and checks if the file exists.
 
