@@ -107,7 +107,7 @@ if prompt := st.chat_input("Enter prompt"):
             conversation.extend(st.session_state.messages)
 
             # Request completion from OpenAI API
-            response = openai.ChatCompletion.create(
+            response = openai.chat.completions.create(
                 model=OPENAI_MODEL,
                 messages=conversation,
                 max_tokens=MAX_TOKENS
