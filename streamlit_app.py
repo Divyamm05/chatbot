@@ -1,12 +1,11 @@
 import pandas as pd
 import streamlit as st
 import openai
-import json
-import os
+import sqlite3
 from utils import load_chat_history, save_chat_history
-from visualizations import generate_pie_chart, generate_bar_chart, preview_uploaded_file
+from visualizations import generate_pie_chart, generate_bar_chart  # Import visualization functions
 from file_handlers import handle_uploaded_file
-from database import connect_to_db, fetch_users, fetch_columns, fetch_data_by_user_id
+from database import connect_to_db, execute_sql_query, fetch_columns, fetch_data_by_user_id  # Import the necessary database functions
 
 # Load API key from Streamlit's secrets
 openai.api_key = st.secrets["openai"]["api_key"]
@@ -80,7 +79,7 @@ if chart_type == "Bar Chart" and x_column is not None and y_column is not None:
 
     if st.button("Generate Bar Chart"):
         # Pass column names as strings (use .name to get the column name)
-        generate_bar_chart(data, x_column.name, y_column.name, start_value, end_value, start_value, end_value)
+        generate_bar_chart(data, x_column.name, y_column.name, start_value, end_value)
 
 # Pie chart dropdown functionality
 if chart_type == "Pie Chart" and pie_column is not None:
@@ -107,7 +106,7 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # User input for the prompt
-if prompt := st.chat_input(f"Enter prompt "):
+if prompt := st.chat_input(f"Enter SQL query or a message: "):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -115,46 +114,43 @@ if prompt := st.chat_input(f"Enter prompt "):
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         with message_placeholder:
-            st.markdown("**Generating response...**")
+            st.markdown("**Processing your query...**")
             st.spinner("Thinking...")
 
         try:
-            # Construct the conversation history as a list of messages
-            system_message = {"role": "system", "content": "You are a helpful assistant."}
-            conversation = [system_message, {"role": "user", "content": prompt}]
-
-            # Connect to the database and check for queries related to user data
+            # Connect to the database
             conn = connect_to_db()  # Connect to the database
 
-            # Check if the prompt is asking for columns of a table
-            if "columns of" in prompt.lower():
-                table_name = prompt.split("columns of")[-1].strip()  # Extract table name
+            # Check if the prompt is a raw SQL query
+            if "select" in prompt.lower() or "insert" in prompt.lower() or "update" in prompt.lower() or "delete" in prompt.lower():
+                # Execute the query dynamically
+                result = execute_sql_query(conn, prompt)
+                
+                if result is not None:
+                    message_placeholder.markdown(f"Query result: {result}")
+                else:
+                    message_placeholder.markdown(f"Query executed successfully but no result to show.")
+            
+            # If the query requests column information from a table
+            elif "columns of" in prompt.lower():
+                table_name = prompt.split("columns of")[-1].strip()
                 columns = fetch_columns(conn, table_name)
-                if columns:
-                    message_placeholder.markdown(f"The columns in the {table_name} table are: {', '.join(columns)}.")
-                else:
-                    message_placeholder.markdown(f"Could not find any columns for table {table_name}.")
-
-            # Check if the prompt is asking for a user by ID
-            elif "user id =" in prompt.lower():
-                user_id = prompt.split("user id =")[-1].strip()  # Extract user ID
+                message_placeholder.markdown(f"Columns of {table_name}: {columns}")
+            
+            # If the query requests user data by user ID
+            elif "user_id =" in prompt.lower():
+                user_id = int(prompt.split("user_id =")[-1].strip())
                 user_data = fetch_data_by_user_id(conn, user_id)
-                if user_data:
-                    message_placeholder.markdown(f"The user with ID {user_id} is: {user_data}.")
-                else:
-                    message_placeholder.markdown(f"No user found with ID {user_id}.")
-
+                message_placeholder.markdown(f"User Data for ID {user_id}: {user_data}")
+            
             else:
-                # For general queries, continue with OpenAI API
-                conversation.extend(st.session_state.messages)  # Add the entire conversation history
-
-                # Request response from OpenAI's API
+                # If it's not a SQL query, use OpenAI API for regular queries
+                conversation = [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": prompt}]
                 response = openai.chat.completions.create(
                     model=OPENAI_MODEL,
                     messages=conversation,
                     max_tokens=MAX_TOKENS
                 )
-
                 full_response = response.choices[0].message.content
                 message_placeholder.markdown(full_response)
 
