@@ -50,23 +50,28 @@ def execute_dynamic_query(conn, table_name, column_name, search_value, exact_mat
         else:
             query = f"SELECT * FROM {table_name} WHERE {column_name} LIKE ?"
 
+        # Use parameterized query to prevent SQL injection
         cursor.execute(query, ('%' + search_value + '%',) if not exact_match else (search_value,))
+        
+        # Fetch all rows
         results = cursor.fetchall()
 
-        # If no results are found
+        # Check if no results were found
         if len(results) == 0:
             return None, f"No records found for '{search_value}' in the column '{column_name}' of the table '{table_name}'."
 
         # If exactly one result is found, return it
         if len(results) == 1:
-            return results[0], None  # Return the entire row (or specific column data if needed)
+            return results[0], None  # Return the entire row
 
         # If multiple results are found, ask for clarification
-        clarification_message = f"Multiple records found for '{search_value}' in the column '{column_name}' of the table '{table_name}':\n"
-        for i, result in enumerate(results, 1):
-            clarification_message += f"{i}. {result}\n"
-
-        clarification_message += f"Please provide more details (e.g., another keyword or ID) to narrow down the search."
+        if len(results) > 1:
+            return None, f"Multiple records found for '{search_value}' in the column '{column_name}' of the table '{table_name}':\n"
+        
+        # Process each result individually
+        for i, row in enumerate(results, 1):
+            result_str = f"{i}. {row}"
+            clarification_message += f"\n{result_str}"
 
         return None, clarification_message
 
@@ -76,4 +81,3 @@ def execute_dynamic_query(conn, table_name, column_name, search_value, exact_mat
     except Exception as e:
         print(f"Unexpected error: {e}")
         return None, "An unexpected error occurred."
-    

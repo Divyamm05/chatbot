@@ -3,10 +3,10 @@ import streamlit as st
 import requests  # Added for downloading the .db file from GitHub
 import sqlite3
 import os
-import pandas as pd
 from utils import load_chat_history, save_chat_history
 from visualizations import generate_pie_chart, generate_bar_chart
 from file_handlers import handle_uploaded_file
+from database import connect_to_db, execute_dynamic_query
 
 # Load API key from Streamlit's secrets
 openai.api_key = st.secrets["openai"]["api_key"]
@@ -34,7 +34,7 @@ def download_db_from_github():
             with open("database2.db", "wb") as f:
                 f.write(response.content)
             if os.path.exists("database2.db") and os.path.getsize("database2.db") > 0:
-                st.success("")
+                st.success("Downloaded database from GitHub successfully!")
             else:
                 st.error("Downloaded database is empty or invalid.")
         else:
@@ -54,40 +54,28 @@ def connect_to_db(db_path):
         st.error(f"Database connection error: {e}")
         return None
 
-# Function to execute a dynamic query
-def execute_dynamic_query(conn, table_name, column_name, search_value):
+# Function to get column names from a given table
+def get_column_names(conn, table_name):
     """
-    Executes a dynamic query to search for a specific value in a given column of a table.
+    This function returns the column names for the specified table in the SQLite database.
 
     Parameters:
     - conn: SQLite database connection
-    - table_name: Name of the table to query
-    - column_name: Name of the column to search
-    - search_value: The value to search for in the column
+    - table_name: The name of the table for which to fetch the column names
 
     Returns:
-    - result: Query result (as a DataFrame)
-    - error: Error message if any
+    - List of column names
     """
     try:
-        # Create the query string
-        query = f"SELECT * FROM {table_name} WHERE {column_name} LIKE ?"
-        
-        # Execute the query
+        query = f"PRAGMA table_info({table_name});"
         cursor = conn.cursor()
-        cursor.execute(query, ('%' + search_value + '%',))  # Use parameterized query to avoid SQL injection
-        result = cursor.fetchall()
-
-        # Check if we got any results
-        if result:
-            # Convert the result into a pandas DataFrame for better display
-            df = pd.DataFrame(result, columns=[desc[0] for desc in cursor.description])
-            return df, None  # Return result and no error
-        else:
-            return "No matching records found.", None
-
+        cursor.execute(query)
+        columns = cursor.fetchall()
+        column_names = [column[1] for column in columns]
+        return column_names
     except sqlite3.Error as e:
-        return None, str(e)  # Return error message
+        st.error(f"Error fetching column names: {e}")
+        return []
 
 # Initialize database connection
 conn = connect_to_db("database2.db")
@@ -174,6 +162,27 @@ if chart_type == "Pie Chart" and pie_column is not None:
         else:
             st.error("Please select a valid column for the Pie Chart")
 
+# Database interaction: Connect and execute queries directly
+if conn:
+    table_name = "sqlite_master"  # Default to the sqlite_master table for column names
+    column_names = get_column_names(conn, table_name)  # Get the column names directly from the master table
+    selected_column = st.selectbox("Select a column to query", column_names)
+    search_value = st.text_input("Enter value to search for", "")
+
+    if search_value:
+        result, error = execute_dynamic_query(conn, table_name, selected_column, search_value)
+        if error:
+            st.error(error)
+        else:
+            st.write(result)
+else:
+    st.error("Could not connect to the database.")
+
+# Display chat messages
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
 # Chat handling and user prompt interaction
 if prompt := st.chat_input(f"Enter your prompt "):
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -216,6 +225,9 @@ if prompt := st.chat_input(f"Enter your prompt "):
                         result, error = execute_dynamic_query(conn, table_name, column_name, search_value)
                         if error:
                             full_response = f"Error: {error}"
+                        elif isinstance(result, list):
+                            # If multiple results are found, ask for clarification
+                            full_response = f"Multiple records found:\n{result}"
                         else:
                             full_response = f"Query results:\n{result}"
                     else:
