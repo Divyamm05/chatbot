@@ -54,10 +54,38 @@ def connect_to_db(db_path):
         st.error(f"Database connection error: {e}")
         return None
 
+# Function to get the table names from the database
+def get_table_names(conn):
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = cursor.fetchall()
+        return [table[0] for table in tables]
+    except sqlite3.DatabaseError as e:
+        st.error(f"Error querying the database: {e}")
+        return []
+
+# Function to get the column names from a table
+def get_column_names(conn, table_name):
+    try:
+        cursor = conn.cursor()
+        cursor.execute(f"PRAGMA table_info({table_name});")
+        columns = cursor.fetchall()
+        return [column[1] for column in columns]  # Return only column names
+    except sqlite3.DatabaseError as e:
+        st.error(f"Error querying column names for table '{table_name}': {e}")
+        return []
+
 # Initialize database connection
 conn = connect_to_db("database2.db")
 if conn is None:
     st.error("Failed to connect to the database. Please check the .db file.")
+else:
+    table_names = get_table_names(conn)
+    if not table_names:
+        st.error("No tables found in the database.")
+    else:
+        selected_table = st.selectbox("Select a table to query", table_names)
 
 # Sidebar for chart selection and file attachment
 with st.sidebar:
@@ -73,19 +101,19 @@ with st.sidebar:
             save_chat_history(st.session_state.messages)  # Save the empty history
             st.rerun()  # Rerun the app to refresh the interface
 
-    # File uploader for attachments
+    # Sidebar: Add a dropdown menu for selecting chart type
+    chart_type = st.selectbox(
+        "Select a chart type for visualization",
+        ("Select a chart", "Pie Chart", "Bar Chart")
+    )
+
+    # File uploader for attachments (moved below the chart selection and slider)
     uploaded_file = st.file_uploader("Upload an attachment (optional)", type=["txt", "csv", "xlsx", "pdf", "jpg", "png", "docx"])
 
-# Handle file uploads
+# Handle file uploads and visualization-related tasks
 data, columns = handle_uploaded_file(uploaded_file)
 
-# Sidebar: Add a dropdown menu for selecting chart type
-chart_type = st.selectbox(
-    "Select a chart type for visualization",
-    ("Select a chart", "Pie Chart", "Bar Chart")
-)
-
-# Handle chart-related tasks
+# Initialize data to None by default
 x_column = None
 y_column = None
 pie_column = None  # Variable to store selected Pie Chart column
@@ -119,6 +147,7 @@ if chart_type == "Bar Chart" and x_column is not None and y_column is not None:
         # Pass column names as strings (use .name to get the column name)
         generate_bar_chart(data, x_column.name, y_column.name, start_value, end_value, start_value, end_value)
 
+
 # Pie chart dropdown functionality
 if chart_type == "Pie Chart" and pie_column is not None:
     # Dropdown for Pie Chart column selection
@@ -137,6 +166,29 @@ if chart_type == "Pie Chart" and pie_column is not None:
             generate_pie_chart(data, pie_column.name, start_value, end_value)
         else:
             st.error("Please select a valid column for the Pie Chart")
+
+# Database interaction: Connect and execute queries on selected table
+if conn and selected_table:
+    column_names = get_column_names(conn, selected_table)
+    if column_names:
+        selected_column = st.selectbox("Select a column to query", column_names)
+        search_value = st.text_input("Enter value to search for", "")
+
+        if search_value:
+            result, error = execute_dynamic_query(conn, selected_table, selected_column, search_value)
+            if error:
+                st.error(error)
+            else:
+                st.write(result)
+    else:
+        st.error("No columns found in the selected table.")
+else:
+    st.error("Could not connect to the database or table selection failed.")
+
+# Display chat messages
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
 # Chat handling and user prompt interaction
 if prompt := st.chat_input(f"Enter your prompt "):
@@ -167,21 +219,16 @@ if prompt := st.chat_input(f"Enter your prompt "):
 
             # Check if the response contains a database query instruction
             if "query:" in full_response:
-                try:
-                    # Extract the query details (e.g., table and column) from the response
-                    query_details = full_response.split("query:")[1].strip()
-                    table_name, column_name, search_value = query_details.split("|")
-                    
-                    # Execute the dynamic query
-                    result, error = execute_dynamic_query(conn, table_name.strip(), column_name.strip(), search_value.strip())
-                    if error:
-                        full_response = f"Error: {error}"
-                    else:
-                        full_response = f"Query results:\n{result}"
-                except ValueError:
-                    full_response = "Error: The query format is incorrect. Please check the format."
-            else:
-                full_response = "No query detected."
+                # Extract the query details (e.g., table and column) from the response
+                query_details = full_response.split("query:")[1].strip()
+                table_name, column_name, search_value = query_details.split("|")
+                
+                # Execute the dynamic query
+                result, error = execute_dynamic_query(conn, table_name.strip(), column_name.strip(), search_value.strip())
+                if error:
+                    full_response = f"Error: {error}"
+                else:
+                    full_response = f"Query results:\n{result}"
 
             # Display the response
             message_placeholder.markdown(full_response)
