@@ -164,13 +164,13 @@ if prompt := st.chat_input(f"Enter prompt "):
                     message_placeholder.markdown(f"No results found for '{search_value}'.")
 
             # Request response from OpenAI's API using openai.ChatCompletion.create()
-            response = openai.chat_completions.create(
+            response = openai.ChatCompletion.create(
                 model=OPENAI_MODEL,
                 messages=conversation,
                 max_tokens=MAX_TOKENS
             )
 
-            full_response = response.choices[0].message.content
+            full_response = response.choices[0].message['content']
             message_placeholder.markdown(full_response)
 
         except Exception as e:
