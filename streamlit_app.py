@@ -3,7 +3,7 @@ import openai
 from utils import load_chat_history, save_chat_history
 from visualizations import generate_pie_chart, generate_bar_chart
 from file_handlers import handle_uploaded_file
-from database import connect_to_db, execute_dynamic_query  # Importing updated database functions
+from database import connect_to_db, execute_dynamic_query
 
 # Load API key from Streamlit's secrets
 openai.api_key = st.secrets["openai"]["api_key"]
@@ -82,6 +82,7 @@ if chart_type == "Bar Chart" and x_column is not None and y_column is not None:
         # Pass column names as strings (use .name to get the column name)
         generate_bar_chart(data, x_column.name, y_column.name, start_value, end_value, start_value, end_value)
 
+
 # Pie chart dropdown functionality
 if chart_type == "Pie Chart" and pie_column is not None:
     # Dropdown for Pie Chart column selection
@@ -119,58 +120,24 @@ if prompt := st.chat_input(f"Enter prompt "):
             st.spinner("Thinking...")
 
         try:
-            # Construct the conversation history as a list of messages with improved prompt engineering
-            system_message = {"role": "system", "content": "You are a helpful assistant. You have access to a database and can assist with queries regarding album information, user data, and more."}
+            # Construct the conversation history as a list of messages
+            system_message = {"role": "system", "content": "You are a helpful assistant."}
             conversation = [system_message, {"role": "user", "content": prompt}]
 
-            # Connect to the database dynamically using the input path
-            conn = connect_to_db(db_path)  # Use the database path provided by the user
+            # If an Excel, CSV, or any other file is uploaded, include it in the conversation
+            if uploaded_file:
+                conversation.append({"role": "user", "content": prompt + "\n\n" + str(data)})
 
-            # Handling ambiguous or contradictory inputs
-            if "album id of" in prompt.lower():
-                album_name = prompt.split("album id of")[-1].strip()
-                if 'balls to the wall' in album_name.lower():
-                    album_id = None
-                    last_mentioned_id = None
+            conversation.extend(st.session_state.messages)  # Add the entire conversation history
 
-                    # Check if the user mentions conflicting IDs
-                    for message in st.session_state.messages:
-                        if "3" in message["content"] or "2" in message["content"]:
-                            if last_mentioned_id and last_mentioned_id != message["content"]:
-                                album_id = None
-                                break
-                            last_mentioned_id = message["content"]
-                    
-                    if album_id is None:
-                        message_placeholder.markdown("It seems like you're mentioning different IDs. Could you please clarify if the album ID for 'Balls to the Wall' is 2 or 3?")
-                    else:
-                        message_placeholder.markdown(f"The album ID for 'Balls to the Wall' is {album_id}.")
-            else:
-                # For general queries, handle dynamic database interaction
-                conversation.extend(st.session_state.messages)  # Add the entire conversation history
-
-                # Query the database based on user input
-                table_name, column_name = 'albums', 'name'  # Example table and column, adjust as needed
-                search_value = prompt
-
-                # Execute dynamic query
-                result, clarification_message = execute_dynamic_query(conn, table_name, column_name, search_value)
-
-                if result:
-                    message_placeholder.markdown(f"Found result: {result}")
-                elif clarification_message:
-                    message_placeholder.markdown(clarification_message)
-                else:
-                    message_placeholder.markdown(f"No results found for '{search_value}'.")
-
-            # Request response from OpenAI's API using openai.completions.create() (new method)
-            response = openai.completions.create(
+            # Request response from OpenAI's API using `openai.ChatCompletion.create()`
+            response = openai.ChatCompletion.create(
                 model=OPENAI_MODEL,
                 messages=conversation,
                 max_tokens=MAX_TOKENS
             )
 
-            full_response = response['choices'][0]['message']['content']
+            full_response = response.choices[0].message['content']
             message_placeholder.markdown(full_response)
 
         except Exception as e:
