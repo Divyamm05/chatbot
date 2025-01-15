@@ -6,7 +6,7 @@ import os
 from utils import load_chat_history, save_chat_history
 from visualizations import generate_pie_chart, generate_bar_chart, preview_uploaded_file
 from file_handlers import handle_uploaded_file
-from database import connect_to_db, fetch_users  # Importing the database functions
+from database import connect_to_db, fetch_users, fetch_columns, fetch_data_by_user_id
 
 # Load API key from Streamlit's secrets
 openai.api_key = st.secrets["openai"]["api_key"]
@@ -126,23 +126,26 @@ if prompt := st.chat_input(f"Enter prompt "):
             # Connect to the database and check for queries related to user data
             conn = connect_to_db()  # Connect to the database
 
-            # If the prompt contains a request for a user ID (e.g., "Give me user id of john")
-            if "user id of" in prompt.lower():
-                user_name = prompt.split("user id of")[-1].strip()  # Extract the user name from the prompt
-                users = fetch_users(conn)
-                user_id = None
-                for user in users:
-                    if user_name.lower() in user[1].lower():  # Assuming the name is in the second column
-                        user_id = user[0]  # Assuming the ID is in the first column
-                        break
-
-                if user_id:
-                    message_placeholder.markdown(f"The user ID of {user_name} is {user_id}.")
+            # Check if the prompt is asking for columns of a table
+            if "columns of" in prompt.lower():
+                table_name = prompt.split("columns of")[-1].strip()  # Extract table name
+                columns = fetch_columns(conn, table_name)
+                if columns:
+                    message_placeholder.markdown(f"The columns in the {table_name} table are: {', '.join(columns)}.")
                 else:
-                    message_placeholder.markdown(f"User {user_name} not found in the database.")
+                    message_placeholder.markdown(f"Could not find any columns for table {table_name}.")
 
-            # Request response from OpenAI's API using `openai.ChatCompletion.create()`
+            # Check if the prompt is asking for a user by ID
+            elif "user id =" in prompt.lower():
+                user_id = prompt.split("user id =")[-1].strip()  # Extract user ID
+                user_data = fetch_data_by_user_id(conn, user_id)
+                if user_data:
+                    message_placeholder.markdown(f"The user with ID {user_id} is: {user_data}.")
+                else:
+                    message_placeholder.markdown(f"No user found with ID {user_id}.")
+
             else:
+                # For general queries, continue with OpenAI API
                 conversation.extend(st.session_state.messages)  # Add the entire conversation history
 
                 # Request response from OpenAI's API
