@@ -55,10 +55,10 @@ if len(columns) > 0:
     # Pie chart and bar chart options for selecting columns
     if chart_type == "Bar Chart":
         x_column_index = st.selectbox("Select X-axis column", options=columns)
-        x_column = columns[x_column_index] if x_column_index else None
+        x_column = data[x_column_index] if x_column_index else None
 
         y_column_index = st.selectbox("Select Y-axis column", options=columns)
-        y_column = columns[y_column_index] if y_column_index else None
+        y_column = data[y_column_index] if y_column_index else None
 
     elif chart_type == "Pie Chart":
         # Add the column selection for Pie Chart using dropdown
@@ -71,15 +71,15 @@ if chart_type == "Bar Chart" and x_column is not None and y_column is not None:
     start_value, end_value = st.slider(
         "Select range of values to visualize",
         min_value=0,
-        max_value=len(data),  # Set max value to the length of the data
-        value=(0, min(10, len(data))),  # Default range (start from 0 to 10 or data length)
+        max_value=len(x_column),  # Set max value to the length of the data
+        value=(0, min(10, len(x_column))),  # Default range (start from 0 to 10 or data length)
         step=1,
         help="Select the start and end values for both X and Y axes"
     )
 
     if st.button("Generate Bar Chart"):
-        # Directly pass the column names as strings (x_column and y_column)
-        generate_bar_chart(data, x_column, y_column, start_value, end_value)
+        # Pass column names as strings (use .name to get the column name)
+        generate_bar_chart(data, x_column.name, y_column.name, start_value, end_value)
 
 # Pie chart dropdown functionality
 if chart_type == "Pie Chart" and pie_column is not None:
