@@ -6,7 +6,7 @@ import os
 from utils import load_chat_history, save_chat_history
 from visualizations import generate_pie_chart, generate_bar_chart, preview_uploaded_file
 from file_handlers import handle_uploaded_file
-from database import connect_to_db, fetch_tables_and_columns, fetch_data_for_query  # New database functions
+from database import connect_to_db, fetch_tables_and_columns  # Updated import for dynamic tables/columns
 
 # Load API key from Streamlit's secrets
 openai.api_key = st.secrets["openai"]["api_key"]
@@ -48,36 +48,7 @@ with st.sidebar:
 # Handle file uploads and visualization-related tasks
 data, columns = handle_uploaded_file(uploaded_file)
 
-# Database connection and schema inspection
-conn = connect_to_db()  # Connect to the database
-
-# Add a check for successful connection
-if conn:
-    tables_columns = fetch_tables_and_columns(conn)  # Get available tables and columns
-else:
-    tables_columns = {}
-
-# Display available tables in the sidebar only if tables_columns is valid
-if tables_columns:
-    table_names = list(tables_columns.keys())
-    table_name = st.selectbox("Select a table to query", options=["Select a table"] + table_names)
-
-    if table_name != "Select a table":
-        column_name = st.selectbox(f"Select a column in {table_name}", options=tables_columns[table_name])
-        search_value = st.text_input(f"Search for a value in {column_name}")
-        
-        if st.button("Search"):
-            results = fetch_data_for_query(conn, table_name, column_name, search_value)
-            if results:
-                st.write(f"Found results in {table_name}:")
-                for row in results:
-                    st.write(row)
-            else:
-                st.write(f"No results found for '{search_value}' in {table_name}.")
-else:
-    st.error("Could not connect to the database. Please check your database configuration.")
-
-# Chart generation functionality (Bar Chart and Pie Chart)
+# Initialize data to None by default
 x_column = None
 y_column = None
 pie_column = None  # Variable to store selected Pie Chart column
@@ -151,9 +122,39 @@ if prompt := st.chat_input(f"Enter prompt "):
             # Construct the conversation history as a list of messages
             system_message = {"role": "system", "content": "You are a helpful assistant."}
             conversation = [system_message, {"role": "user", "content": prompt}]
-            conversation.extend(st.session_state.messages)  # Add the entire conversation history
+
+            # Connect to the database and check for tables/columns dynamically
+            conn = connect_to_db()  # Connect to the database
+
+            if conn:
+                # Fetch tables and columns from the database
+                tables_columns = fetch_tables_and_columns(conn)
+                if tables_columns:
+                    # If tables and columns are found, display them for user to choose
+                    table_name = st.selectbox("Select a table", options=[table[0] for table in tables_columns])
+                    selected_columns = next(table[1] for table in tables_columns if table[0] == table_name)
+                    column_name = st.selectbox(f"Select a column from {table_name}", options=selected_columns)
+
+                    if column_name:
+                        query = f"SELECT {column_name} FROM {table_name} LIMIT 5"  # Sample query to fetch data
+                        cursor = conn.cursor()
+                        cursor.execute(query)
+                        rows = cursor.fetchall()
+
+                        # Show the fetched data as a preview
+                        if rows:
+                            preview_data = pd.DataFrame(rows, columns=[column_name])
+                            st.write(preview_data)
+                        else:
+                            st.write("No data found.")
+                else:
+                    st.error("No tables found in the database.")
+            else:
+                st.error("Could not connect to the database. Please check your database configuration.")
 
             # Request response from OpenAI's API
+            conversation.extend(st.session_state.messages)  # Add the entire conversation history
+
             response = openai.chat.completions.create(
                 model=OPENAI_MODEL,
                 messages=conversation,
