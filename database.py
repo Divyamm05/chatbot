@@ -72,3 +72,7 @@ def execute_dynamic_query(conn, table_name, column_name, search_value):
     except Exception as e:
         print(f"Unexpected error: {e}")
         return None, "An unexpected error occurred."
+    finally:
+        cursor.close()  # Ensure the cursor is closed after usage
+        conn.close()  # Optionally close the connection if no longer needed
+
