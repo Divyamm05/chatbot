@@ -49,7 +49,7 @@ with st.sidebar:
 data, columns = handle_uploaded_file(uploaded_file)
 
 # Database connection (adjust the path as needed)
-db_path = "/home/vr-dt-100/Desktop/your_database_name.db"
+db_path = "/home/vr-dt-100/Desktop/database.db"
 conn = connect_to_db(db_path)
 
 user_dict = {}  # Default empty dictionary
