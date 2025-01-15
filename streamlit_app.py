@@ -190,8 +190,8 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# User input for the prompt
-if prompt := st.chat_input(f"Enter prompt "):
+# Chat handling and user prompt interaction
+if prompt := st.chat_input(f"Enter your prompt "):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -204,18 +204,33 @@ if prompt := st.chat_input(f"Enter prompt "):
 
         try:
             # Construct the conversation history as a list of messages
-            system_message = {"role": "system", "content": "You are a helpful assistant."}
+            system_message = {"role": "system", "content": "You are a helpful assistant that can help with database queries."}
             conversation = [{"role": "user", "content": prompt}]
             conversation.extend(st.session_state.messages)  # Add the entire conversation history
 
-            # Request response from OpenAI's API using `openai.chat.completions.create()` for version 1.0.0
+            # Request response from OpenAI's API
             response = openai.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=conversation,
-            max_tokens=MAX_TOKENS
+                model=OPENAI_MODEL,
+                messages=conversation,
+                max_tokens=MAX_TOKENS
             )
 
             full_response = response.choices[0].message.content
+
+            # Check if the response contains a database query instruction
+            if "query:" in full_response:
+                # Extract the query details (e.g., table and column) from the response
+                query_details = full_response.split("query:")[1].strip()
+                table_name, column_name, search_value = query_details.split("|")
+                
+                # Execute the dynamic query
+                result, error = execute_dynamic_query(conn, table_name.strip(), column_name.strip(), search_value.strip())
+                if error:
+                    full_response = f"Error: {error}"
+                else:
+                    full_response = f"Query results:\n{result}"
+
+            # Display the response
             message_placeholder.markdown(full_response)
 
         except Exception as e:
