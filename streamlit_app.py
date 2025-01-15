@@ -8,7 +8,7 @@ from database import connect_to_db, execute_dynamic_query
 
 # Load API key from Streamlit's secrets
 openai.api_key = st.secrets["openai"]["api_key"]
-db_path = "/home/vr-dt-100/Desktop/.db"
+db_path = "/home/vr-dt-100/Desktop/database2.db"
 
 # Set model parameters
 OPENAI_MODEL = "gpt-3.5-turbo"
