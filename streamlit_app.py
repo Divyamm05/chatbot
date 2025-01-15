@@ -219,16 +219,26 @@ if prompt := st.chat_input(f"Enter your prompt "):
 
             # Check if the response contains a database query instruction
             if "query:" in full_response:
-                # Extract the query details (e.g., table and column) from the response
-                query_details = full_response.split("query:")[1].strip()
-                table_name, column_name, search_value = query_details.split("|")
-                
-                # Execute the dynamic query
-                result, error = execute_dynamic_query(conn, table_name.strip(), column_name.strip(), search_value.strip())
-                if error:
-                    full_response = f"Error: {error}"
-                else:
-                    full_response = f"Query results:\n{result}"
+                try:
+                    # Extract the query details (e.g., table and column) from the response
+                    query_details = full_response.split("query:")[1].strip()
+
+                    # Ensure we split into 3 components: table_name, column_name, and search_value
+                    query_parts = query_details.split("|")
+                    if len(query_parts) == 3:
+                        table_name, column_name, search_value = [part.strip() for part in query_parts]
+
+                        # Execute the dynamic query
+                        result, error = execute_dynamic_query(conn, table_name, column_name, search_value)
+                        if error:
+                            full_response = f"Error: {error}"
+                        else:
+                            full_response = f"Query results:\n{result}"
+                    else:
+                        full_response = "Error: Invalid query format returned by the model."
+
+                except Exception as e:
+                    full_response = f"Error: {str(e)}"
 
             # Display the response
             message_placeholder.markdown(full_response)

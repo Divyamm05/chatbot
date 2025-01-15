@@ -76,3 +76,4 @@ def execute_dynamic_query(conn, table_name, column_name, search_value, exact_mat
     except Exception as e:
         print(f"Unexpected error: {e}")
         return None, "An unexpected error occurred."
+    
