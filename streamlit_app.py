@@ -48,17 +48,6 @@ with st.sidebar:
 # Handle file uploads and visualization-related tasks
 data, columns = handle_uploaded_file(uploaded_file)
 
-# Database connection (adjust the path as needed)
-db_path = "/home/vr-dt-100/Desktop/database.db"
-conn = connect_to_db(db_path)
-
-user_dict = {}  # Default empty dictionary
-if conn:
-    # Fetch user details from the database
-    users = fetch_users(conn)
-    user_dict = {user[0]: {"username": user[1], "first_name": user[2], "last_name": user[3]} for user in users}
-    conn.close()  # Close the database connection
-
 # Initialize data to None by default
 x_column = None
 y_column = None
@@ -139,13 +128,6 @@ if prompt := st.chat_input(f"Enter prompt "):
                 conversation.append({"role": "user", "content": prompt + "\n\n" + str(data)})
 
             conversation.extend(st.session_state.messages)  # Add the entire conversation history
-
-            # Check if the user is in the database and include their name in the prompt
-            if 'user_id' in st.session_state:
-                user_id = st.session_state['user_id']
-                user_info = user_dict.get(user_id)
-                if user_info:
-                    conversation.insert(1, {"role": "system", "content": f"User Info: {user_info['first_name']} {user_info['last_name']}"})
 
             # Request response from OpenAI's API using `openai.ChatCompletion.create()`
             response = openai.chat.completions.create(
