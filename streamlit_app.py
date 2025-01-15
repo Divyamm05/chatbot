@@ -6,7 +6,7 @@ import os
 from utils import load_chat_history, save_chat_history
 from visualizations import generate_pie_chart, generate_bar_chart, preview_uploaded_file
 from file_handlers import handle_uploaded_file
-from database import connect_to_db, fetch_users  # Importing database functions
+from database import connect_to_db, fetch_users, fetch_user_by_name  # Importing the new database functions
 
 # Load API key from Streamlit's secrets
 openai.api_key = st.secrets["openai"]["api_key"]
@@ -106,6 +106,19 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
+# Function to handle database queries
+def handle_database_query(query):
+    if "user id of" in query.lower():
+        # Extract the name from the query (e.g., "john" from "user id of john")
+        name = query.split("user id of")[-1].strip()
+        user_data = fetch_user_by_name(name)
+        if not user_data.empty:
+            return f"The user ID of {name} is {user_data.iloc[0]['id']}"  # Replace 'id' with your actual column name
+        else:
+            return f"Sorry, I couldn't find a user named {name}."
+    else:
+        return "I am not sure how to process this query. Please ask about a user."
+
 # User input for the prompt
 if prompt := st.chat_input(f"Enter prompt "):
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -119,28 +132,34 @@ if prompt := st.chat_input(f"Enter prompt "):
             st.spinner("Thinking...")
 
         try:
-            # Construct the conversation history as a list of messages
-            system_message = {"role": "system", "content": "You are a helpful assistant."}
-            conversation = [system_message, {"role": "user", "content": prompt}]
+            # Check if the prompt is a database query
+            if "user id of" in prompt.lower():
+                response_text = handle_database_query(prompt)
+            else:
+                # Construct the conversation history as a list of messages
+                system_message = {"role": "system", "content": "You are a helpful assistant."}
+                conversation = [system_message, {"role": "user", "content": prompt}]
 
-            # If an Excel, CSV, or any other file is uploaded, include it in the conversation
-            if uploaded_file:
-                conversation.append({"role": "user", "content": prompt + "\n\n" + str(data)})
+                # If an Excel, CSV, or any other file is uploaded, include it in the conversation
+                if uploaded_file:
+                    conversation.append({"role": "user", "content": prompt + "\n\n" + str(data)})
 
-            conversation.extend(st.session_state.messages)  # Add the entire conversation history
+                conversation.extend(st.session_state.messages)  # Add the entire conversation history
 
-            # Request response from OpenAI's API using `openai.ChatCompletion.create()`
-            response = openai.chat.completions.create(
-                model=OPENAI_MODEL,
-                messages=conversation,
-                max_tokens=MAX_TOKENS
-            )
+                # Request response from OpenAI's API using `openai.ChatCompletion.create()`
+                response = openai.chat.completions.create(
+                    model=OPENAI_MODEL,
+                    messages=conversation,
+                    max_tokens=MAX_TOKENS
+                )
 
-            full_response = response.choices[0].message.content
-            message_placeholder.markdown(full_response)
+                full_response = response.choices[0].message.content
+                response_text = full_response
+
+            message_placeholder.markdown(response_text)
 
         except Exception as e:
-            st.session_state.messages.append({"role": "assisatant", "content": f"Error: {str(e)}"})
+            st.session_state.messages.append({"role": "assistant", "content": f"Error: {str(e)}"})
             message_placeholder.markdown(f"Error: {str(e)}")
 
 # Save the updated chat history to the file

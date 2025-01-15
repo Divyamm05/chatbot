@@ -1,55 +1,25 @@
 import sqlite3
-import logging
+import pandas as pd
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+DB_PATH = '/home/vr-dt-100/Desktop/database.db'
 
-# Connect to the database
-def connect_to_db(db_path):
-    try:
-        conn = sqlite3.connect(db_path)
-        logging.info("Connected to the database.")
-        return conn
-    except sqlite3.Error as e:
-        logging.error(f"Connection error: {e}")
-        return None
+# Function to connect to the database
+def connect_to_db():
+    conn = sqlite3.connect(DB_PATH)
+    return conn
 
-# Fetch all users
-def fetch_users(conn):
-    try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM user_details")
-        return cursor.fetchall()
-    except sqlite3.Error as e:
-        logging.error(f"Error fetching users: {e}")
-        return []
+# Function to fetch users from the database
+def fetch_users():
+    conn = connect_to_db()
+    query = "SELECT * FROM users"  # Replace 'users' with your actual table name
+    users_df = pd.read_sql(query, conn)
+    conn.close()
+    return users_df
 
-# Fetch a user by ID
-def fetch_user_by_id(conn, user_id):
-    try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM user_details WHERE id = ?", (user_id,))
-        return cursor.fetchone()
-    except sqlite3.Error as e:
-        logging.error(f"Error fetching user by ID: {e}")
-        return None
-
-# Fetch users by gender
-def fetch_users_by_gender(conn, gender):
-    try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM user_details WHERE gender = ?", (gender,))
-        return cursor.fetchall()
-    except sqlite3.Error as e:
-        logging.error(f"Error fetching users by gender: {e}")
-        return []
-
-# Fetch active users (assuming active status is stored as a column `active`)
-def fetch_active_users(conn):
-    try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM user_details WHERE active = 1")
-        return cursor.fetchall()
-    except sqlite3.Error as e:
-        logging.error(f"Error fetching active users: {e}")
-        return []
+# Function to fetch user by name (e.g., "John")
+def fetch_user_by_name(name):
+    conn = connect_to_db()
+    query = "SELECT * FROM users WHERE name = ?"  # Replace 'users' with your table name and 'name' with the column name for user names
+    user_data = pd.read_sql(query, conn, params=(name,))
+    conn.close()
+    return user_data
